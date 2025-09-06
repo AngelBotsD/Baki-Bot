@@ -25,8 +25,8 @@ let handler = async (m, { isPrems, conn }) => {
     caption: texto,
     contextInfo: {
       externalAdReply: {
-        title: "𝐀𝐧𝐠𝐞𝐥 𝐁𝐨𝐭 𝐃𝐞𝐥𝐚𝐲",
-        body: "𝐀𝐧𝐠𝐞𝐥 𝐁𝐨𝐭 𝐃𝐞𝐥𝐚𝐲",
+        title: "𝗕𝗔𝗞𝗜 - 𝗕𝗢𝗧",
+        body: "",
         thumbnailUrl: img,
         sourceUrl: '',
         mediaType: 1,
