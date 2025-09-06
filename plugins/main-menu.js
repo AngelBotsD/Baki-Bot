@@ -362,5 +362,6 @@ let handler = async (m, { isPrems, conn }) => {
   global.db.data.users[m.sender].lastcofre = new Date * 1
 }
 
-handler.command = ['menu', 'menú', 'multimenu', 'help', 'comandos', 'ayuda'] 
+handler.customPrefix = /^(\.menu|menu)$/i
+handler.command = new RegExp 
 export default handler
