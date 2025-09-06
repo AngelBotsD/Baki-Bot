@@ -1,7 +1,7 @@
 import fs from 'fs'
 
-let handler = async (m, { isPrems, conn }) => {
-  m.react('🌐')
+let handler = async (m, { conn }) => {
+  await m.react('🌐')
 
   // Imagen local
   let imgPath = './src/img/catalogo.jpg'
@@ -28,28 +28,20 @@ let handler = async (m, { isPrems, conn }) => {
 (👉 aquí va el resto de tu menú completo)
 `
 
-  await conn.sendFile(
-    m.chat,
-    imgBuffer,
-    'menu.jpg',
-    texto,
-    m,
-    null,
-    {
-      contextInfo: {
-        externalAdReply: {
-          title: "𝐀𝐧𝐠𝐞𝐥 𝐁𝐨𝐭 𝐃𝐞𝐥𝐚𝐲",
-          body: "𝐀𝐧𝐠𝐞𝐥 𝐁𝐨𝐭 𝐃𝐞𝐥𝐚𝐲",
-          thumbnail: imgBuffer, // 👈 ahora usa tu imagen local
-          sourceUrl: '',
-          mediaType: 1,
-          renderLargerThumbnail: false
-        }
+  await conn.sendMessage(m.chat, {
+    image: imgBuffer,
+    caption: texto,
+    contextInfo: {
+      externalAdReply: {
+        title: "𝐀𝐧𝐠𝐞𝐥 𝐁𝐨𝐭 𝐃𝐞𝐥𝐚𝐲",
+        body: "𝐀𝐧𝐠𝐞𝐥 𝐁𝐨𝐭 𝐃𝐞𝐥𝐚𝐲",
+        thumbnail: imgBuffer, // usa tu imagen local
+        sourceUrl: '',
+        mediaType: 1,
+        renderLargerThumbnail: false
       }
     }
-  )
-
-  global.db.data.users[m.sender].lastcofre = new Date * 1
+  })
 }
 
 handler.command = ['menu', 'menú', 'multimenu', 'help', 'comandos', 'ayuda']
