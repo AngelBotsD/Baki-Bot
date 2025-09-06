@@ -22,6 +22,7 @@ const APIS_VIDEO = [
   }
 ];
 
+// Función para obtener la URL del video usando APIs
 const getVideoUrl = async (videoUrl) => {
   let lastError = null;
 
@@ -50,16 +51,28 @@ const getVideoUrl = async (videoUrl) => {
   throw lastError || new Error("Todas las APIs fallaron");
 };
 
+// Función para descargar y enviar video como buffer
+const sendVideoFromUrl = async (conn, chatId, videoUrl, fileName, quoted) => {
+  const res = await fetch(videoUrl);
+  if (!res.ok) throw new Error("No se pudo descargar el video");
+  const buffer = await res.arrayBuffer();
+
+  await conn.sendMessage(chatId, {
+    video: { buffer: Buffer.from(buffer) },
+    mimetype: "video/mp4",
+    fileName,
+    caption: `🎬 ${fileName}`
+  }, { quoted });
+};
+
+// Handler principal
 let handler = async (m, { conn }) => {
   const body = m.text?.trim();
   if (!body) return;
-
   if (!/^play2|.play2\s+/i.test(body)) return;
 
   const query = body.replace(/^(play2|.play2)\s+/i, "").trim();
-  if (!query) {
-    throw `⭐ Escribe el nombre del video\n\nEjemplo: play2 Bad Bunny - Monaco`;
-  }
+  if (!query) throw `⭐ Escribe el nombre del video\n\nEjemplo: play2 Bad Bunny - Monaco`;
 
   try {
     await conn.sendMessage(m.chat, { react: { text: "🕒", key: m.key } });
@@ -68,16 +81,15 @@ let handler = async (m, { conn }) => {
     const video = searchResults.videos[0];
     if (!video) throw new Error("No se encontró el video");
 
-    if (video.seconds > 1800) {
-      throw "❌ El video es muy largo (máximo 30 minutos)";
-    }
+    if (video.seconds > 1800) throw "❌ El video es muy largo (máximo 30 minutos)";
 
-    // Miniatura con título
+    // Enviar miniatura con título
     await conn.sendMessage(m.chat, {
       image: { url: video.thumbnail },
       caption: `*_${video.title}_*\n\n> 𝙱𝙰𝙺𝙸 - 𝙱𝙾𝚃 𝙳𝙴𝚂𝙲𝙰𝚁𝙶𝙰𝚂 💻`
     }, { quoted: m });
 
+    // Obtener URL del video
     let videoUrlFinal;
     try {
       videoUrlFinal = await getVideoUrl(video.url);
@@ -86,13 +98,8 @@ let handler = async (m, { conn }) => {
       throw "⚠️ Error al procesar el video. Intenta con otro";
     }
 
-    // Enviar video
-    await conn.sendMessage(m.chat, {
-      video: { url: videoUrlFinal },
-      mimetype: "video/mp4",
-      fileName: `${video.title.slice(0, 30)}.mp4`.replace(/[^\w\s.-]/gi, ''),
-      caption: `🎬 *${video.title}*`
-    }, { quoted: m });
+    // Descargar y enviar video
+    await sendVideoFromUrl(conn, m.chat, videoUrlFinal, `${video.title.slice(0, 30)}.mp4`.replace(/[^\w\s.-]/gi, ''), m);
 
     await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
 
@@ -100,7 +107,7 @@ let handler = async (m, { conn }) => {
     console.error("Error:", error);
     await conn.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
 
-    const errorMsg = typeof error === 'string' ? error : 
+    const errorMsg = typeof error === 'string' ? error :
       `❌ *Error:* ${error.message || 'Ocurrió un problema'}\n\n` +
       `🔸 *Posibles soluciones:*\n` +
       `• Verifica el nombre del video\n` +
