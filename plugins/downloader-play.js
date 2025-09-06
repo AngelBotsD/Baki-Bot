@@ -1,31 +1,31 @@
 import fetch from "node-fetch";
 import yts from "yt-search";
 
-const APIS = [
+const APIS_VIDEO = [
   {
     name: "vreden",
-    url: (videoUrl) => `https://api.vreden.my.id/api/ytmp3?url=${encodeURIComponent(videoUrl)}&quality=64`,
+    url: (videoUrl) => `https://api.vreden.my.id/api/ytmp4?url=${encodeURIComponent(videoUrl)}&quality=360`,
     extract: (data) => data?.result?.download?.url
   },
   {
     name: "zenkey",
-    url: (videoUrl) => `https://api.zenkey.my.id/api/download/ytmp3?apikey=zenkey&url=${encodeURIComponent(videoUrl)}&quality=64`,
+    url: (videoUrl) => `https://api.zenkey.my.id/api/download/ytmp4?apikey=zenkey&url=${encodeURIComponent(videoUrl)}&quality=360`,
     extract: (data) => data?.result?.download?.url
   },
   {
     name: "yt1s",
     url: (videoUrl) => `https://yt1s.io/api/ajaxSearch?q=${encodeURIComponent(videoUrl)}`,
     extract: async (data) => {
-      const k = data?.links?.mp3?.auto?.k;
-      return k ? `https://yt1s.io/api/ajaxConvert?vid=${data.vid}&k=${k}&quality=64` : null;
+      const k = data?.links?.mp4?.auto?.k;
+      return k ? `https://yt1s.io/api/ajaxConvert?vid=${data.vid}&k=${k}&quality=360` : null;
     }
   }
 ];
 
-const getAudioUrl = async (videoUrl) => {
+const getVideoUrl = async (videoUrl) => {
   let lastError = null;
 
-  for (const api of APIS) {
+  for (const api of APIS_VIDEO) {
     try {
       console.log(`Probando API: ${api.name}`);
       const apiUrl = api.url(videoUrl);
@@ -34,11 +34,11 @@ const getAudioUrl = async (videoUrl) => {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const data = await response.json();
-      const audioUrl = await api.extract(data);
+      const videoUrlFinal = await api.extract(data);
 
-      if (audioUrl) {
+      if (videoUrlFinal) {
         console.log(`Éxito con API: ${api.name}`);
-        return audioUrl;
+        return videoUrlFinal;
       }
     } catch (error) {
       console.error(`Error con API ${api.name}:`, error.message);
@@ -54,11 +54,11 @@ let handler = async (m, { conn }) => {
   const body = m.text?.trim();
   if (!body) return;
 
-  if (!/^play|.play\s+/i.test(body)) return;
+  if (!/^play2|.play2\s+/i.test(body)) return;
 
-  const query = body.replace(/^(play|.play)\s+/i, "").trim();
+  const query = body.replace(/^(play2|.play2)\s+/i, "").trim();
   if (!query) {
-    throw `⭐ Escribe el nombre de la canción\n\nEjemplo: play Bad Bunny - Monaco`;
+    throw `⭐ Escribe el nombre del video\n\nEjemplo: play2 Bad Bunny - Monaco`;
   }
 
   try {
@@ -68,29 +68,30 @@ let handler = async (m, { conn }) => {
     const video = searchResults.videos[0];
     if (!video) throw new Error("No se encontró el video");
 
-    if (video.seconds > 600) {
-      throw "❌ El audio es muy largo (máximo 10 minutos)";
+    if (video.seconds > 1800) {
+      throw "❌ El video es muy largo (máximo 30 minutos)";
     }
 
-    // Enviar miniatura con título en negrita/cursiva y texto adicional
+    // Miniatura con título
     await conn.sendMessage(m.chat, {
       image: { url: video.thumbnail },
       caption: `*_${video.title}_*\n\n> 𝙱𝙰𝙺𝙸 - 𝙱𝙾𝚃 𝙳𝙴𝚂𝙲𝙰𝚁𝙶𝙰𝚂 💻`
     }, { quoted: m });
 
-    let audioUrl;
+    let videoUrlFinal;
     try {
-      audioUrl = await getAudioUrl(video.url);
+      videoUrlFinal = await getVideoUrl(video.url);
     } catch (e) {
-      console.error("Error al obtener audio:", e);
-      throw "⚠️ Error al procesar el audio. Intenta con otra canción";
+      console.error("Error al obtener video:", e);
+      throw "⚠️ Error al procesar el video. Intenta con otro";
     }
 
+    // Enviar video
     await conn.sendMessage(m.chat, {
-      audio: { url: audioUrl },
-      mimetype: "audio/mpeg",
-      fileName: `${video.title.slice(0, 30)}.mp3`.replace(/[^\w\s.-]/gi, ''),
-      ptt: true
+      video: { url: videoUrlFinal },
+      mimetype: "video/mp4",
+      fileName: `${video.title.slice(0, 30)}.mp4`.replace(/[^\w\s.-]/gi, ''),
+      caption: `🎬 *${video.title}*`
     }, { quoted: m });
 
     await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
@@ -102,7 +103,7 @@ let handler = async (m, { conn }) => {
     const errorMsg = typeof error === 'string' ? error : 
       `❌ *Error:* ${error.message || 'Ocurrió un problema'}\n\n` +
       `🔸 *Posibles soluciones:*\n` +
-      `• Verifica el nombre de la canción\n` +
+      `• Verifica el nombre del video\n` +
       `• Intenta con otro tema\n` +
       `• Prueba más tarde`;
 
@@ -110,7 +111,7 @@ let handler = async (m, { conn }) => {
   }
 };
 
-handler.customPrefix = /^(play|.play)\s+/i;
+handler.customPrefix = /^(play2|.play2)\s+/i;
 handler.command = new RegExp;
 handler.exp = 0;
 
