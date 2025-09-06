@@ -35,7 +35,7 @@ let handler = async (m, { conn }) => {
       externalAdReply: {
         title: "𝐀𝐧𝐠𝐞𝐥 𝐁𝐨𝐭 𝐃𝐞𝐥𝐚𝐲",
         body: "𝐀𝐧𝐠𝐞𝐥 𝐁𝐨𝐭 𝐃𝐞𝐥𝐚𝐲",
-        thumbnailUrl: "https://qu.ax/JRCMQ.jpg", // 👈 usa URL online aquí
+        thumbnailUrl: "https://cdn.russellxz.click/fa46d669.jpeg", // 👈 usa URL online aquí
         sourceUrl: '',
         mediaType: 1,
         renderLargerThumbnail: false
