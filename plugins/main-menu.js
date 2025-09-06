@@ -18,11 +18,12 @@ let texto = `
 ┃⋗ ⏳ *.runtime*  
 ┃⋗ 📢 *.reportar*  
 ┃⋗ 💡 *.sugerencia*
-┗━━━━━━━━━━━━━━┛
+┗━━━━━━━━━━━━━━┛`
 
-... (todo tu menú aquí igualito)
-`
+// Primero mandamos la imagen
+await conn.sendFile(m.chat, img, 'menu.jpg', '', m)
 
+// Luego mandamos el texto con el icono
 await conn.sendMessage(m.chat, {
   text: texto,
   contextInfo: {
