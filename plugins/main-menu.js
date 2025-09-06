@@ -1,6 +1,6 @@
 let handler = async (m, { isPrems, conn }) => {
 m.react('🌐')
-let img = 'https://cdn.russellxz.click/c7839340.jpg' 
+let img = 'https://cdn.russellxz.click/fa46d669.jpeg' 
 let texto = `
 🪙 𝐌 𝐔 𝐋 𝐓 𝐈 - 𝐌 𝐄 𝐍 𝐔́ 
 
