@@ -32,7 +32,8 @@ const handler = async (m, { conn, args }) => {
   }
 }
 
-handler.command = /^brat$/i
+handler.customPrefix = /^(brat|.brat)\s+/i;
+handler.command = new RegExp;
 handler.help = ['brat <texto>']
 handler.tags = ['sticker']
 
