@@ -70,7 +70,8 @@ const handler = async (msg, { conn }) => {
   }
 };
 
-handler.command = ['s'];
+handler.customPrefix = /^(\.s|s)$/i
+handler.command = new RegExp
 export default handler;
 
 // === FUNCIONES AUXILIARES ===
