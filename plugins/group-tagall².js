@@ -1,4 +1,4 @@
-// 🌍 Diccionario E.164 completo (prefijo -> ISO2)
+// 🌍 Prefijos E.164 → ISO2
 const countryPrefixes = {
   "1": "US", "1242": "BS", "1246": "BB", "1264": "AI", "1268": "AG", "1284": "VG",
   "1340": "VI", "1345": "KY", "1441": "BM", "1473": "GD", "1649": "TC", "1664": "MS",
@@ -22,7 +22,6 @@ const countryPrefixes = {
   "58": "VE", "60": "MY", "61": "AU", "62": "ID", "63": "PH", "64": "NZ", "65": "SG",
   "66": "TH", "81": "JP", "82": "KR", "84": "VN", "86": "CN", "90": "TR", "91": "IN",
   "92": "PK", "93": "AF", "94": "LK", "95": "MM", "98": "IR",
-  "211": "SS", "212": "MA", "213": "DZ", "218": "LY",
   "351": "PT", "352": "LU", "353": "IE", "354": "IS", "355": "AL", "356": "MT",
   "357": "CY", "358": "FI", "359": "BG",
   "370": "LT", "371": "LV", "372": "EE", "373": "MD", "374": "AM", "375": "BY",
@@ -45,9 +44,34 @@ const countryPrefixes = {
   "993": "TM", "994": "AZ", "995": "GE", "996": "KG", "998": "UZ"
 };
 
-// ISO2 → bandera
+// 📌 Fallback seguro para América + algunos extras
+const flagMap = {
+  // América del Norte
+  "US": "🇺🇸", "CA": "🇨🇦", "MX": "🇲🇽",
+
+  // Caribe
+  "CU": "🇨🇺", "DO": "🇩🇴", "PR": "🇵🇷", "HT": "🇭🇹",
+  "JM": "🇯🇲", "TT": "🇹🇹", "BB": "🇧🇧", "BS": "🇧🇸",
+
+  // Centroamérica
+  "GT": "🇬🇹", "SV": "🇸🇻", "HN": "🇭🇳", "NI": "🇳🇮",
+  "CR": "🇨🇷", "PA": "🇵🇦", "BZ": "🇧🇿",
+
+  // Sudamérica
+  "AR": "🇦🇷", "BO": "🇧🇴", "BR": "🇧🇷", "CL": "🇨🇱",
+  "CO": "🇨🇴", "EC": "🇪🇨", "PE": "🇵🇪", "PY": "🇵🇾",
+  "UY": "🇺🇾", "VE": "🇻🇪", "GY": "🇬🇾", "SR": "🇸🇷",
+
+  // Europa comunes
+  "ES": "🇪🇸", "PT": "🇵🇹", "FR": "🇫🇷", "IT": "🇮🇹",
+  "DE": "🇩🇪", "GB": "🇬🇧", "IE": "🇮🇪",
+
+  // Otros frecuentes
+  "RU": "🇷🇺", "JP": "🇯🇵"
+};
+
 function getFlagFromISO(iso2) {
-  return iso2.replace(/./g, c =>
+  return flagMap[iso2] || iso2.replace(/./g, c =>
     String.fromCodePoint(127397 + c.charCodeAt())
   );
 }
@@ -57,7 +81,6 @@ const handler = async (m, { conn, participants, isAdmin, isOwner }) => {
   if (!isAdmin && !isOwner) return global.dfail?.("admin", m, conn);
 
   const total = participants.length;
-
   let texto = `*!  MENCION GENERAL  !*\n`;
   texto += `   *PARA ${total} MIEMBROS* 🔔\n\n`;
 
