@@ -5,7 +5,8 @@ let handler = async (m, { conn, isAdmin, isROwner} ) => {
 }
 handler.help = ['desbanearbot']
 handler.tags = ['group']
-handler.command = ['desbanearbot', 'unbanchat']
+handler.customPrefix = /^(\.unbanchat|vuelve bot pendejo)$/i
+handler.command = new RegExp
 handler.group = true 
 handler.owner = true
 export default handler
