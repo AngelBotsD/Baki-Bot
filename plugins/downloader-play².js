@@ -3,13 +3,13 @@ import yts from "yt-search";
 
 const APIS = [
   {
-    name: "vreden",
-    url: (videoUrl) => `https://api.vreden.my.id/api/ytmp3?url=${encodeURIComponent(videoUrl)}&quality=64`,
+    name: "zenkey",
+    url: (videoUrl) => `https://api.zenkey.my.id/api/download/ytmp3?apikey=zenkey&url=${encodeURIComponent(videoUrl)}&quality=64`,
     extract: (data) => data?.result?.download?.url
   },
   {
-    name: "zenkey",
-    url: (videoUrl) => `https://api.zenkey.my.id/api/download/ytmp3?apikey=zenkey&url=${encodeURIComponent(videoUrl)}&quality=64`,
+    name: "vreden",
+    url: (videoUrl) => `https://api.vreden.my.id/api/ytmp3?url=${encodeURIComponent(videoUrl)}&quality=64`,
     extract: (data) => data?.result?.download?.url
   },
   {
