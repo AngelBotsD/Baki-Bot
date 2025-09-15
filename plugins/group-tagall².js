@@ -4,14 +4,14 @@ const handler = async (m, { conn, participants, isAdmin, isOwner }) => {
 
   const total = participants.length;
   let texto = `*!  MENCION GENERAL  !*\n`;
-  texto += `   *PARA ${total} MIEMBROS* \n\n`;
+  texto += `   *PARA ${total} MIEMBROS* 🔔\n\n`;
 
   for (const user of participants) {
     const numero = user.id.split('@')[0];
     texto += `┊» 🚩 @${numero}\n`;
   }
 
-  await conn.sendMessage(m.chat, { react: { text: '🚩', key: m.key } });
+  await conn.sendMessage(m.chat, { react: { text: '🔔', key: m.key } });
 
   await conn.sendMessage(m.chat, {
     text: texto,
