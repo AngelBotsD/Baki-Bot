@@ -5,7 +5,13 @@ var handler = async (m, { conn, isAdmin }) => {
     if (!m.isGroup) return global.dfail?.('group', m, conn)
     if (!isAdmin) return global.dfail?.('admin', m, conn)
 
-    let link = '🗡️ https://chat.whatsapp.com/' + await conn.groupInviteCode(m.chat)
+    let link
+    try {
+      link = '🗡️ https://chat.whatsapp.com/' + await conn.groupInviteCode(m.chat)
+    } catch {
+      return global.dfail?.('botAdmin', m, conn)
+    }
+
     let ppUrl = await conn.profilePictureUrl(m.chat, 'image').catch(() => null)
 
     if (ppUrl) {
@@ -24,7 +30,7 @@ var handler = async (m, { conn, isAdmin }) => {
 
   } catch (error) {
     console.error(error)
-    return global.dfail?.('admin', m, conn)
+    return global.dfail?.('botAdmin', m, conn)
   }
 }
 
