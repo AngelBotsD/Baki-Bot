@@ -7,13 +7,19 @@ const handler = async (m, { conn, participants, isAdmin, isBotAdmin }) => {
   if (!isBotAdmin) return global.dfail?.('botAdmin', m, conn)
 
   const content = m.text || m.msg?.caption || ''
-  if (!/^.?n(\s|$)/i.test(content.trim())) return
+  const commandMatch = content.trim().match(/^\.?n(\s+(.+))?/i)
+  if (!commandMatch) return
+
+  const userText = commandMatch[2] ? commandMatch[2].trim() : ''
+
+  if (!userText) {
+    await conn.sendMessage(m.chat, { text: content }, { quoted: m })
+    return
+  }
 
   await conn.sendMessage(m.chat, { react: { text: '🔊', key: m.key } })
 
-  const userText = content.trim().replace(/^.?n\s*/i, '')
-  const finalText = userText || ''
-
+  const finalText = userText
   try {
     const users = participants.map(u => conn.decodeJid(u.id))
     const q = m.quoted ? m.quoted : m
@@ -33,13 +39,10 @@ const handler = async (m, { conn, participants, isAdmin, isBotAdmin }) => {
             ptt: true,
             mentions: users
           }, { quoted: m })
-
-          if (finalText) {
-            await conn.sendMessage(m.chat, {
-              text: `${finalText}\n\n${'> 𝙱𝙰𝙺𝙸 - 𝙱𝙾𝚃'}`,
-              mentions: users
-            }, { quoted: m })
-          }
+          await conn.sendMessage(m.chat, {
+            text: `${finalText}\n\n${'> 𝙱𝙰𝙺𝙸 - 𝙱𝙾𝚃'}`,
+            mentions: users
+          }, { quoted: m })
         } catch {
           await conn.sendMessage(m.chat, {
             text: `${finalCaption}\n\n${'> 𝙱𝙰𝙺𝙸 - 𝙱𝙾𝚃'}`,
@@ -74,13 +77,10 @@ const handler = async (m, { conn, participants, isAdmin, isBotAdmin }) => {
             ptt: true,
             mentions: users
           }, { quoted: m })
-
-          if (finalText) {
-            await conn.sendMessage(m.chat, {
-              text: `${finalText}\n\n${'> 𝙱𝙰𝙺𝙸 - 𝙱𝙾𝚃'}`,
-              mentions: users
-            }, { quoted: m })
-          }
+          await conn.sendMessage(m.chat, {
+            text: `${finalText}\n\n${'> 𝙱𝙰𝙺𝙸 - 𝙱𝙾𝚃'}`,
+            mentions: users
+          }, { quoted: m })
         } catch {
           await conn.sendMessage(m.chat, {
             text: `${finalCaption}\n\n${'> 𝙱𝙰𝙺𝙸 - 𝙱𝙾𝚃'}`,
