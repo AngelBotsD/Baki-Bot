@@ -28,6 +28,8 @@ var handler = async (m, { conn, isAdmin }) => {
       )
     }
 
+    await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } })
+
   } catch (error) {
     console.error(error)
     return global.dfail?.('botAdmin', m, conn)
