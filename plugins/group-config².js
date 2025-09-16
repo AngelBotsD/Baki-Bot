@@ -1,5 +1,9 @@
-let handler = async (m, { conn }) => {
-  const lower = m.text.toLowerCase();
+let handler = async (m, { conn, isAdmin, isBotAdmin }) => {
+  if (!m.isGroup) return global.dfail?.('group', m, conn)
+  if (!isAdmin) return global.dfail?.('admin', m, conn)
+  if (!isBotAdmin) return global.dfail?.('botAdmin', m, conn)
+
+  const lower = m.text.toLowerCase()
 
   let isClose = {
     abrir: "not_announcement",
@@ -16,19 +20,18 @@ let handler = async (m, { conn }) => {
     ".close": "announcement",
     ".grupo open": "not_announcement",
     ".grupo close": "announcement"
-  }[lower];
+  }[lower]
 
-  if (!isClose) return;
+  if (!isClose) return
 
-  await conn.groupSettingUpdate(m.chat, isClose);
+  await conn.groupSettingUpdate(m.chat, isClose)
+  await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } })
+}
 
-  await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
-};
+handler.customPrefix = /^(?:\.?grupo\s(?:abrir|cerrar|open|close)|\.?(?:abrir|cerrar|open|close))$/i
+handler.command = new RegExp()
+handler.admin = true
+handler.botAdmin = true
+handler.group = true
 
-handler.customPrefix = /^(?:\.?grupo\s(?:abrir|cerrar|open|close)|\.?(?:abrir|cerrar|open|close))$/i;
-handler.command = new RegExp; // sin prefijo
-handler.admin = true;
-handler.botAdmin = true;
-handler.group = true;
-
-export default handler;
+export default handler
