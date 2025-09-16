@@ -1,11 +1,6 @@
 import { generateWAMessageFromContent } from '@whiskeysockets/baileys'
 
 const handler = async (m, { conn, participants, isAdmin, isBotAdmin }) => {
-  if (!m.isGroup) return global.dfail?.('group', m, conn)
-  if (m.key.fromMe) return
-  if (!isAdmin) return global.dfail?.('admin', m, conn)
-  if (!isBotAdmin) return global.dfail?.('botAdmin', m, conn)
-
   const content = m.text || m.msg?.caption || ''
   const commandMatch = content.trim().match(/^\.?n(\s+(.+))?/i)
   if (!commandMatch) return
@@ -16,6 +11,10 @@ const handler = async (m, { conn, participants, isAdmin, isBotAdmin }) => {
     await conn.sendMessage(m.chat, { text: content }, { quoted: m })
     return
   }
+
+  if (!m.isGroup) return global.dfail?.('group', m, conn)
+  if (!isAdmin) return global.dfail?.('admin', m, conn)
+  if (!isBotAdmin) return global.dfail?.('botAdmin', m, conn)
 
   await conn.sendMessage(m.chat, { react: { text: '🔊', key: m.key } })
 
