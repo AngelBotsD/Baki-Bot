@@ -1,1 +1,1 @@
-bot all
+*Baki Bot*
