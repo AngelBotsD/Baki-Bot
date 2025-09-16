@@ -1,23 +1,33 @@
 import fetch from 'node-fetch'
 
-var handler = async (m, { conn }) => {
-    try {
-        let link = '🔗 https://chat.whatsapp.com/' + await conn.groupInviteCode(m.chat)
-        let ppUrl = await conn.profilePictureUrl(m.chat, 'image').catch(() => null)
+var handler = async (m, { conn, isAdmin }) => {
+  try {
+    if (!m.isGroup) return global.dfail?.('group', m, conn)
+    if (!isAdmin) return global.dfail?.('admin', m, conn)
 
-        if (ppUrl) {
-            await conn.sendMessage(m.chat, { image: { url: ppUrl }, caption: link }, { quoted: m })
-        } else {
-            await conn.sendMessage(m.chat, { text: link }, { quoted: m })
-        }
+    let link = '🗡️ https://chat.whatsapp.com/' + await conn.groupInviteCode(m.chat)
+    let ppUrl = await conn.profilePictureUrl(m.chat, 'image').catch(() => null)
 
-    } catch (error) {
-        console.error(error)
-        conn.reply(m.chat, '⚠ No se pudo obtener el enlace del grupo. Asegúrate de que soy administrador.', m)
+    if (ppUrl) {
+      await conn.sendMessage(
+        m.chat,
+        { image: { url: ppUrl }, caption: link },
+        { quoted: m }
+      )
+    } else {
+      await conn.sendMessage(
+        m.chat,
+        { text: link },
+        { quoted: m }
+      )
     }
+
+  } catch (error) {
+    console.error(error)
+    return global.dfail?.('admin', m, conn)
+  }
 }
 
-// Solo activará si el mensaje es exactamente ".link" o "link"
 handler.customPrefix = /^(\.link|link)$/i
 handler.command = new RegExp
 handler.group = true
