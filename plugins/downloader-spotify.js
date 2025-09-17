@@ -1,104 +1,79 @@
-import fetch from "node-fetch";
-import yts from "yt-search";
+import fetch from 'node-fetch';
+import axios from 'axios';
+import sharp from 'sharp';
+import { Buffer } from 'buffer';
 
-const APIS = [
-  {
-    name: "ryzen",
-    url: (videoUrl) => `https://apidl.asepharyana.cloud/ytmp3?url=${encodeURIComponent(videoUrl)}&quality=64`,
-    extract: (data) => data?.result?.url || data?.result?.download?.url
-  },
-  {
-    name: "delirius",
-    url: (videoUrl) => `https://delirius-apiofc.vercel.app/api/ytmp3?url=${encodeURIComponent(videoUrl)}&quality=64`,
-    extract: (data) => data?.result?.url || data?.result?.download?.url
-  }
-];
-
-const getAudioUrl = async (videoUrl) => {
-  let lastError = null;
-
-  for (const api of APIS) {
-    try {
-      console.log(`Probando API: ${api.name}`);
-      const res = await fetch(api.url(videoUrl), { timeout: 5000 });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-
-      const audioUrl = await api.extract(data);
-      if (audioUrl) {
-        console.log(`Éxito con API: ${api.name}`);
-        return audioUrl;
-      }
-    } catch (e) {
-      console.error(`Error con API ${api.name}:`, e.message);
-      lastError = e;
-      continue;
-    }
-  }
-
-  throw lastError || new Error("Todas las APIs fallaron");
+const apis = {
+  ryzen: 'https://apidl.asepharyana.cloud/',
+  delirius: 'https://delirius-apiofc.vercel.app/',
+  rioo: 'https://restapi.apibotwa.biz.id/',
 };
 
-let handler = async (m, { conn }) => {
-  const body = m.text?.trim();
-  if (!body) return;
-  if (!/^.spotify\s+/i.test(body)) return;
-
-  const query = body.replace(/^(.spotify)\s+/i, "").trim();
-  if (!query) throw `⭐ Escribe el nombre de la canción\n\nEjemplo: .spotify Bad Bunny - Monaco`;
+const handler = async (m, { conn, text }) => {
+  if (!text) return m.reply(`⭐ Escribe el nombre de la canción\n\nEjemplo: .spotify Chica Paranormal`);
 
   try {
-    await conn.sendMessage(m.chat, { react: { text: "🕒", key: m.key } });
+    // 1. Buscar en Spotify
+    const { data } = await axios.get(`${apis.delirius}search/spotify?q=${encodeURIComponent(text)}&limit=5`);
+    if (!data.data || data.data.length === 0) throw `❌ No se encontraron resultados para "${text}"`;
 
-    const searchResults = await yts({ query, hl: 'es', gl: 'ES' });
-    const video = searchResults.videos[0];
-    if (!video) throw new Error("No se encontró el video");
-    if (video.seconds > 600) throw "❌ El audio es muy largo (máximo 10 minutos)";
+    const song = data.data[0];
+    const imgUrl = song.image;
+    const songUrl = song.url;
 
-    // Formatear duración
-    const minutes = Math.floor(video.seconds / 60);
-    const seconds = video.seconds % 60;
-    const durationFormatted = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    const info = `*𝚂𝙿𝙾𝚃𝙸𝙵𝚈 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*\n\n` +
+                 `🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${song.title}\n` +
+                 `🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${song.artist}\n` +
+                 `🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${song.duration}`;
 
-    // Enviar miniatura con info estilo DOWNLOADER
-    await conn.sendMessage(m.chat, {
-      image: { url: video.thumbnail },
-      caption: `*𝚂𝙿𝙾𝚃𝙸𝙵𝚈 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁* \n\n` +
-               `🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${video.title}\n` +
-               `🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${video.author.name || 'Desconocido'}\n` +
-               `🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${durationFormatted}`,
-    }, { quoted: m });
+    // 2. Redimensionar portada
+    const imgRes = await fetch(imgUrl);
+    const imgBuffer = await imgRes.arrayBuffer();
+    const resizedImg = await sharp(Buffer.from(imgBuffer)).resize(480, 360).jpeg().toBuffer();
 
-    // Obtener audio
-    const audioUrl = await getAudioUrl(video.url);
+    await conn.sendMessage(m.chat, { image: resizedImg, caption: info }, { quoted: m });
+    await conn.sendMessage(m.chat, { react: { text: '🕒', key: m.key } });
 
-    // Enviar audio como PTT
-    await conn.sendMessage(m.chat, {
-      audio: { url: audioUrl },
-      mimetype: "audio/mpeg",
-      fileName: `${video.title.slice(0, 30)}.mp3`.replace(/[^\w\s.-]/gi, ''),
-      ptt: true
-    }, { quoted: m });
+    // 3. Intentar descargar
+    const apiOrder = [
+      { name: 'ryzen', url: `${apis.ryzen}api/downloader/spotify?url=${encodeURIComponent(songUrl)}`, key: 'link' },
+      { name: 'delirius v3', url: `${apis.delirius}download/spotifydlv3?url=${encodeURIComponent(songUrl)}`, key: 'data.url' },
+      { name: 'delirius', url: `${apis.delirius}download/spotifydl?url=${encodeURIComponent(songUrl)}`, key: 'data.url' },
+      { name: 'rioo', url: `${apis.rioo}api/spotify?url=${encodeURIComponent(songUrl)}`, key: 'data.response' }
+    ];
 
-    await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
+    let success = false;
+    for (const api of apiOrder) {
+      try {
+        const res = await (await fetch(api.url)).json();
+        let downloadUrl = res;
+        for (const k of api.key.split('.')) downloadUrl = downloadUrl?.[k];
+        if (!downloadUrl) throw new Error('No se obtuvo URL de audio');
 
-  } catch (error) {
-    console.error("Error:", error);
-    await conn.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
+        await conn.sendMessage(
+          m.chat,
+          { audio: { url: downloadUrl }, mimetype: 'audio/mpeg', ptt: true },
+          { quoted: m }
+        );
+        success = true;
+        break;
+      } catch (e) {
+        console.log(`Error con API ${api.name}:`, e.message);
+      }
+    }
 
-    const errorMsg = typeof error === 'string' ? error : 
-      `❌ *Error:* ${error.message || 'Ocurrió un problema'}\n\n` +
-      `🔸 *Posibles soluciones:*\n` +
-      `• Verifica el nombre de la canción\n` +
-      `• Intenta con otro tema\n` +
-      `• Prueba más tarde`;
+    if (!success) throw new Error('Todas las APIs fallaron');
 
-    await conn.sendMessage(m.chat, { text: errorMsg }, { quoted: m });
+    await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
+
+  } catch (e) {
+    await conn.sendMessage(m.chat, { react: { text: '❌', key: m.key } });
+    await m.reply(`❌ *Error:* ${e.message || e}\n\n🔸 *Posibles soluciones:*\n• Verifica el nombre\n• Intenta con otro tema\n• Prueba más tarde`);
   }
 };
 
-handler.customPrefix = /^(.spotify)\s+/i;
-handler.command = new RegExp;
-handler.exp = 0;
+handler.help = ['spotify'];
+handler.tags = ['downloader'];
+handler.command = ['spotify'];
 
 export default handler;
