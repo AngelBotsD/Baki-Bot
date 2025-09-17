@@ -13,7 +13,7 @@ const handler = async (m, { conn, text }) => {
   if (!text) return m.reply(`_*[ ⚠️ ] Agrega lo que quieres descargar en Spotify*_\n\n_Ejemplo:_\n.play Chica Paranormal.`);
 
   try {
-    // Buscar canción
+    // Buscar canción en Delirius (para info de título, artista y duración)
     const { data } = await axios.get(`${apis.delirius}search/spotify?q=${encodeURIComponent(text)}&limit=10`);
     if (!data.data || data.data.length === 0) {
       throw `_*[ ⚠️ ] No se encontraron resultados para "${text}" en Spotify.*_`;
@@ -23,23 +23,24 @@ const handler = async (m, { conn, text }) => {
     const imgUrl = song.image;
     const songUrl = song.url;
 
-    // Descargar imagen original y redimensionar
-    const imgRes = await fetch(imgUrl);
-    const imgBuffer = await imgRes.arrayBuffer();
-    const resizedImg = await sharp(Buffer.from(imgBuffer))
-      .resize(640, 640)
-      .jpeg()
-      .toBuffer();
-
     const info = `📥 *𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*\n\n` +
                  `🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${song.title}\n` +
                  `🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${song.artist}\n` +
                  `🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${song.duration}\n\n` +
                  `_*🎶 Enviando música...*_`;
 
+    // Descargar imagen de Spotify y redimensionar al mismo tamaño que el handler play (ej: 480x360)
+    const imgRes = await fetch(imgUrl);
+    const imgBuffer = await imgRes.arrayBuffer();
+    const resizedImg = await sharp(Buffer.from(imgBuffer))
+      .resize(480, 360) // mismo tamaño que miniatura de play
+      .jpeg()
+      .toBuffer();
+
     // Enviar imagen redimensionada
     await conn.sendMessage(m.chat, { image: resizedImg, caption: info }, { quoted: m });
 
+    // Reacción de "procesando"
     await conn.sendMessage(m.chat, { react: { text: '🕒', key: m.key } });
 
     const sendAudio = async (downloadUrl) => {
