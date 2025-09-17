@@ -25,8 +25,8 @@ const handler = async (m, { conn, command, args, text, usedPrefix }) => {
     const track = data.data[0];
     const img = track.image;
     const url = track.url;
-    const info = `tu pura madre 
-» ${track.title}`.trim();
+    const info = `> 𝙱𝙰𝙺𝙸 - 𝙱𝙾𝚃 𝙳𝙴𝚂𝙲𝙰𝚁𝙶𝙰𝚂\n 
+_*${track.title}`.trim();*_
 
     // Enviar portada + info antes del audio
     await conn.sendFile(m.chat, img, 'imagen.jpg', info, m);
