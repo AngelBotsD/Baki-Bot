@@ -25,7 +25,7 @@ const handler = async (m, {conn, command, args, text, usedPrefix}) => {
         const url = song.url;
 
         // ⚡ Info igual que .play
-        const info = `*SPOTIFY DOWNLOADER*\n\n` +
+        const info = `*> 𝚂𝙿𝙾𝚃𝙸𝙵𝚈 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*\n\n` +
                      `🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${song.title}\n` +
                      `🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${song.artist}\n` +
                      `🕒 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${song.duration}`;
