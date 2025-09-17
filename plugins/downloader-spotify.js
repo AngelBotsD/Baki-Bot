@@ -27,8 +27,8 @@ const handler = async (m, {conn, command, args, text, usedPrefix}) => {
         // ⚡ Info igual que .play
         const info = `*SPOTIFY DOWNLOADER*\n\n` +
                      `🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${song.title}\n` +
-                     `🎤 *Artista:* ${song.artist}\n` +
-                     `🕒 *Duración:* ${song.duration}`;
+                     `🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${song.artist}\n` +
+                     `🕒 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${song.duration}`;
 
         await conn.sendFile(m.chat, img, 'imagen.jpg', info, m);
 
