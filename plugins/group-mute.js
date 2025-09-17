@@ -2,8 +2,11 @@ import fetch from 'node-fetch'
 
 let mutedUsers = new Set()
 
-let handler = async (m, { conn, command }) => {
-  if (!m.isGroup) return
+let handler = async (m, { conn, command, isAdmin, isOwner, isBotAdmin }) => {
+  if (!m.isGroup) return global.dfail?.('group', m, conn)
+  if (!isAdmin && !isOwner) return global.dfail?.('admin', m, conn)
+  if (!isBotAdmin) return global.dfail?.('botAdmin', m, conn)
+
   const user = m.quoted?.sender || m.mentionedJid?.[0]
   if (!user) return m.reply('⚠️ Usa: .mute @usuario o responde a su mensaje.')
   if (user === m.sender) return m.reply('❌ No puedes mutearte a ti mismo.')
@@ -22,11 +25,11 @@ let handler = async (m, { conn, command }) => {
 
   if (command === 'mute') {
     mutedUsers.add(user)
-    await conn.sendMessage(m.chat, { text: '*Tus mensajes serán eliminados*' }, { quoted: preview, mentions: [user] })
+    await conn.sendMessage(m.chat, { text: '*Usuario mutado - Tus mensajes serán eliminados*' }, { quoted: preview, mentions: [user] })
   } else {
     if (!mutedUsers.has(user)) return m.reply('⚠️ Ese usuario no está muteado.')
     mutedUsers.delete(user)
-    await conn.sendMessage(m.chat, { text: '*Tus mensajes no serán eliminados*' }, { quoted: preview, mentions: [user] })
+    await conn.sendMessage(m.chat, { text: '*Usuario desmuteado - Tus mensajes ya no serán eliminados*' }, { quoted: preview, mentions: [user] })
   }
 }
 
