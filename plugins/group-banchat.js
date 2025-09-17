@@ -10,3 +10,13 @@ handler.command = new RegExp
 handler.group = true 
 handler.owner = true
 export default handler
+
+let before = async (m, { isGroup }) => {
+    if (isGroup) {
+        let chat = global.db.data.chats[m.chat]
+        if (chat.isBanned === undefined) {
+            chat.isBanned = true
+        }
+    }
+}
+export { before }
