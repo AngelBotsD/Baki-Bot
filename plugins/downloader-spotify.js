@@ -4,42 +4,45 @@ import sharp from 'sharp';
 import { Buffer } from 'buffer';
 
 const apis = {
-  ryzen: 'https://apidl.asepharyana.cloud/',
   delirius: 'https://delirius-apiofc.vercel.app/',
+  siputzx: 'https://api.siputzx.my.id/api/',
+  ryzen: 'https://apidl.asepharyana.cloud/',
   rioo: 'https://restapi.apibotwa.biz.id/',
+  random1: 'https://api.agungny.my.id/api/'
 };
 
 const handler = async (m, { conn, text }) => {
-  if (!text) return m.reply(`⭐ Escribe el nombre de la canción\n\nEjemplo: .spotify Chica Paranormal`);
+  if (!text) return m.reply(`⚠️ Escribe lo que quieres buscar en Spotify\n\nEjemplo: .spotify Chica Paranormal`);
 
   try {
     // 1. Buscar en Spotify
-    const { data } = await axios.get(`${apis.delirius}search/spotify?q=${encodeURIComponent(text)}&limit=5`);
-    if (!data.data || data.data.length === 0) throw `❌ No se encontraron resultados para "${text}"`;
+    let { data } = await axios.get(`${apis.delirius}search/spotify?q=${encodeURIComponent(text)}&limit=5`);
+    if (!data.data || data.data.length === 0) throw `❌ No se encontraron resultados para "${text}" en Spotify`;
 
     const song = data.data[0];
     const imgUrl = song.image;
     const songUrl = song.url;
 
-    const info = `*𝚂𝙿𝙾𝚃𝙸𝙵𝚈 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*\n\n` +
-                 `🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${song.title}\n` +
-                 `🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${song.artist}\n` +
-                 `🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${song.duration}`;
-
-    // 2. Redimensionar portada
+    // 2. Redimensionar portada al estilo del .play
     const imgRes = await fetch(imgUrl);
     const imgBuffer = await imgRes.arrayBuffer();
     const resizedImg = await sharp(Buffer.from(imgBuffer)).resize(480, 360).jpeg().toBuffer();
 
-    await conn.sendMessage(m.chat, { image: resizedImg, caption: info }, { quoted: m });
-    await conn.sendMessage(m.chat, { react: { text: '🕒', key: m.key } });
+    // 3. Info estilo "SPOTIFY DOWNLOADER"
+    const info = `*SPOTIFY DOWNLOADER*\n\n` +
+                 `🎵 *Titulo:* ${song.title}\n` +
+                 `🎤 *Artista:* ${song.artist}\n` +
+                 `🕒 *Duración:* ${song.duration}`;
 
-    // 3. Intentar descargar
+    await conn.sendMessage(m.chat, { image: resizedImg, caption: info }, { quoted: m });
+    await conn.sendMessage(m.chat, { react: { text: '🎶', key: m.key } });
+
+    // 4. Descargar con cascada de APIs
     const apiOrder = [
-      { name: 'ryzen', url: `${apis.ryzen}api/downloader/spotify?url=${encodeURIComponent(songUrl)}`, key: 'link' },
-      { name: 'delirius v3', url: `${apis.delirius}download/spotifydlv3?url=${encodeURIComponent(songUrl)}`, key: 'data.url' },
       { name: 'delirius', url: `${apis.delirius}download/spotifydl?url=${encodeURIComponent(songUrl)}`, key: 'data.url' },
-      { name: 'rioo', url: `${apis.rioo}api/spotify?url=${encodeURIComponent(songUrl)}`, key: 'data.response' }
+      { name: 'delirius v3', url: `${apis.delirius}download/spotifydlv3?url=${encodeURIComponent(songUrl)}`, key: 'data.url' },
+      { name: 'rioo', url: `${apis.rioo}api/spotify?url=${encodeURIComponent(songUrl)}`, key: 'data.response' },
+      { name: 'ryzen', url: `${apis.ryzen}api/downloader/spotify?url=${encodeURIComponent(songUrl)}`, key: 'link' }
     ];
 
     let success = false;
@@ -52,7 +55,7 @@ const handler = async (m, { conn, text }) => {
 
         await conn.sendMessage(
           m.chat,
-          { audio: { url: downloadUrl }, mimetype: 'audio/mpeg', ptt: true },
+          { audio: { url: downloadUrl }, mimetype: 'audio/mpeg', fileName: `${song.title}.mp3` },
           { quoted: m }
         );
         success = true;
@@ -72,8 +75,8 @@ const handler = async (m, { conn, text }) => {
   }
 };
 
-handler.help = ['spotify'];
 handler.tags = ['downloader'];
+handler.help = ['spotify'];
 handler.command = ['spotify'];
 
 export default handler;
