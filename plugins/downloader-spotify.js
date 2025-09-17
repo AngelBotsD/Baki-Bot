@@ -35,7 +35,8 @@ const handler = async (m, {conn, command, args, text, usedPrefix}) => {
 _*🎶 Enviando música...*_`.trim();
 
         await conn.sendFile(m.chat, img, 'imagen.jpg', info, m);
-        await conn.sendMessage(m.chat, { text: '🕒 Procesando tu canción...' }, { quoted: m });
+
+        await conn.sendMessage(m.chat, { react: { text: '🕒', key: m.key } });
 
         const sendAudio = async (downloadUrl) => {
             await conn.sendMessage(
@@ -43,7 +44,7 @@ _*🎶 Enviando música...*_`.trim();
                 { audio: { url: downloadUrl }, ptt: true, mimetype: 'audio/mpeg' }, 
                 { quoted: m }
             );
-            await conn.sendMessage(m.chat, { text: '✅ Enviado correctamente.' }, { quoted: m });
+            await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
         };
 
         try {
