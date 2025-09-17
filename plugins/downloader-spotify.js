@@ -26,7 +26,7 @@ const handler = async (m, {conn, command, args, text, usedPrefix}) => {
 
         // ⚡ Info igual que .play
         const info = `*SPOTIFY DOWNLOADER*\n\n` +
-                     `🎵 *Titulo:* ${song.title}\n` +
+                     `🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${song.title}\n` +
                      `🎤 *Artista:* ${song.artist}\n` +
                      `🕒 *Duración:* ${song.duration}`;
 
