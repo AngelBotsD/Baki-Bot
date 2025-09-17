@@ -11,7 +11,7 @@ const handler = async (m, { conn, participants, isAdmin, isBotAdmin }) => {
   await conn.sendMessage(m.chat, { react: { text: '🔊', key: m.key } })
 
   const userText = content.trim().replace(/^.?n\s*/i, '')
-  const finalText = userText || ''
+  const finalText = userText || 'que quieres puto asqueroso'
 
   try {
     const users = participants.map(u => conn.decodeJid(u.id))
