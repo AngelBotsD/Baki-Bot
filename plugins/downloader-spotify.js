@@ -11,11 +11,6 @@ const APIS = [
     name: "delirius",
     url: (videoUrl) => `https://delirius-apiofc.vercel.app/api/ytmp3?url=${encodeURIComponent(videoUrl)}&quality=64`,
     extract: (data) => data?.result?.url || data?.result?.download?.url
-  },
-  {
-    name: "rioo",
-    url: (videoUrl) => `https://restapi.apibotwa.biz.id/api/ytmp3?url=${encodeURIComponent(videoUrl)}&quality=64`,
-    extract: (data) => data?.result?.url || data?.result?.download?.url
   }
 ];
 
@@ -25,13 +20,11 @@ const getAudioUrl = async (videoUrl) => {
   for (const api of APIS) {
     try {
       console.log(`Probando API: ${api.name}`);
-      let audioUrl;
-
       const res = await fetch(api.url(videoUrl), { timeout: 5000 });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      audioUrl = await api.extract(data);
 
+      const audioUrl = await api.extract(data);
       if (audioUrl) {
         console.log(`Éxito con API: ${api.name}`);
         return audioUrl;
@@ -52,7 +45,7 @@ let handler = async (m, { conn }) => {
   if (!/^.spotify\s+/i.test(body)) return;
 
   const query = body.replace(/^(.spotify)\s+/i, "").trim();
-  if (!query) throw `⭐ Escribe el nombre de la canción\n\nEjemplo: play Bad Bunny - Monaco`;
+  if (!query) throw `⭐ Escribe el nombre de la canción\n\nEjemplo: .spotify Bad Bunny - Monaco`;
 
   try {
     await conn.sendMessage(m.chat, { react: { text: "🕒", key: m.key } });
@@ -76,7 +69,7 @@ let handler = async (m, { conn }) => {
                `🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${durationFormatted}`,
     }, { quoted: m });
 
-    // Obtener audio con las nuevas APIs
+    // Obtener audio
     const audioUrl = await getAudioUrl(video.url);
 
     // Enviar audio como PTT
