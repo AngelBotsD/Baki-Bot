@@ -1,11 +1,13 @@
 import fs, { promises } from 'fs'
 import fetch from 'node-fetch'
+
 let handler = async (m, { conn, usedPrefix, command }) => {
 try {
-let d = new Date(new Date + 3600000)
+let d = new Date(Date.now() + 3600000)
 let locale = 'es'
 let week = d.toLocaleDateString(locale, { weekday: 'long' })
 let date = d.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })
+let time = d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 let _uptime = process.uptime() * 1000
 let uptime = clockString(_uptime)
 let rtotalreg = Object.values(global.db.data.users).filter(user => user.registered == true).length 
@@ -13,12 +15,19 @@ let more = String.fromCharCode(8206)
 let readMore = more.repeat(850)   
 let taguser = conn.getName(m.sender)
 let user = global.db.data.users[m.sender]
-let fkontak = { "key": { "participants":"0@s.whatsapp.net", "remoteJid": "status@broadcast", "fromMe": false, "id": "Halo" }, "message": { "contactMessage": { "vcard": `BEGIN:VCARD\nVERSION:3.0\nN:Sy;Bot;;;\nFN:y\nitem1.TEL;waid=${m.sender.split('@')[0]}:${m.sender.split('@')[0]}\nitem1.X-ABLabel:Ponsel\nEND:VCARD` }}, "participant": "0@s.whatsapp.net" }
+
+let fkontak = { 
+  "key": { "participants":"0@s.whatsapp.net", "remoteJid": "status@broadcast", "fromMe": false, "id": "Halo" }, 
+  "message": { "contactMessage": { "vcard": `BEGIN:VCARD\nVERSION:3.0\nN:Sy;Bot;;;\nFN:y\nitem1.TEL;waid=${m.sender.split('@')[0]}:${m.sender.split('@')[0]}\nitem1.X-ABLabel:Ponsel\nEND:VCARD` }}, 
+  "participant": "0@s.whatsapp.net" 
+}
+
 let menu = `
 ¡Hola! 👋🏻 @${m.sender.split("@")[0]}
 
- \`\`\`${week}, ${date}\`\`\`
- 
+📅 *${week}, ${date}*
+⏰ *${time}*
+
 ╭──𝗠𝗘𝗡𝗨 𝗙𝗥𝗘𝗘 𝗙𝗜𝗥𝗘────
 │ 𝘉𝘪𝘦𝘯𝘷𝘦𝘯𝘪𝘥𝘰 ...
 │ 𝘚𝘶𝘮𝘦́𝘳𝘨𝘦𝘵𝘦 𝘦𝘯 𝘦𝘴𝘵𝘢
@@ -34,8 +43,8 @@ let menu = `
 ┃🇻🇳➺ .16𝘷𝘴16 𝙝𝙤𝙧𝙖 𝙮 𝙥𝙖𝙞𝙨
 ┃🇻🇳➺ .20𝘷𝘴20 𝙝𝙤𝙧𝙖 𝙮 𝙥𝙖𝙞𝙨
 ┃🇻🇳➺ .24𝘷𝘴24 𝙝𝙤𝙧𝙖 𝙮 𝙥𝙖𝙞𝙨
-┃🏴‍☠️➺ .𝘪𝘯𝘵𝘦𝘳𝘯𝘢4𝘷𝘴4 𝙝𝙤𝙧𝙖
-┃🏴‍☠️➺ .𝘪𝘯𝘵𝘦𝘳𝘯𝘢6𝘷𝘴6 𝙝𝙤𝙧𝙖
+┃🏴‍☠️➺ .𝘪𝘯𝘵𝘦𝘳𝘯𝘢4𝘷𝘴4 𝙝𝙤𝙳
+┃🏴‍☠️➺ .𝘪𝘯𝘵𝘦𝘳𝘯𝘢6𝘷𝘴6 𝙝𝙤𝙳
 ┃🇦🇶➺ .𝘴𝘤𝘳𝘪𝘮
 ┃🇦🇶➺ .𝘴𝘤𝘳𝘪𝘮𝘥𝘶𝘰
 ┃🇦🇶➺ .𝘮𝘢𝘱𝘢𝘤𝘶𝘢𝘥𝘳𝘪𝘭𝘢𝘵𝘦𝘳𝘰
@@ -52,9 +61,7 @@ let menu = `
 ┃🏗️➺ .𝘯𝘦𝘹𝘵𝘦𝘳𝘳𝘢
 ┃🏞️➺ .𝘢𝘭𝘱𝘦𝘴
 ╰━━━━━━⋆★⋆━━━━━━⬣
-
-
- `.trim()
+`.trim()
 
 const vi = ['https://telegra.ph/file/523e4cd6e968fcab7c160.mp4']
 
@@ -62,20 +69,19 @@ try {
 await conn.sendMessage(m.chat, { video: { url: vi.getRandom() }, gifPlayback: true, caption: menu, mentions: [m.sender, global.conn.user.jid] }, { quoted: fkontak }) 
 } catch (error) {
 try {
-await conn.sendMessage(m.chat, { image: { url: gataMenu.getRandom() }, gifPlayback: false, caption: menu, mentions: [m.sender, global.conn.user.jid] }, { quoted: fkontak }) 
+await conn.sendMessage(m.chat, { image: { url: gataMenu.getRandom() }, caption: menu, mentions: [m.sender, global.conn.user.jid] }, { quoted: fkontak }) 
 } catch (error) {
 try {
-await conn.sendMessage(m.chat, { image: gataImg.getRandom(), gifPlayback: false, caption: menu, mentions: [m.sender, global.conn.user.jid] }, { quoted: fkontak }) 
+await conn.sendMessage(m.chat, { image: gataImg.getRandom(), caption: menu, mentions: [m.sender, global.conn.user.jid] }, { quoted: fkontak }) 
 } catch (error) {
-try{
+try {
 await conn.sendFile(m.chat, imagen5, 'menu.jpg', menu, fkontak, false, { mentions: [m.sender, global.conn.user.jid] })
 } catch (error) {
 return 
 }}}} 
 
 } catch (e) {
-await m.reply(lenguajeGB['smsMalError3']() + '\n*' + lenguajeGB.smsMensError1() + '*\n*' + usedPrefix + `${lenguajeGB.lenguaje() == 'es' ? 'reporte' : 'report'}` + '* ' + `${lenguajeGB.smsMensError2()} ` + usedPrefix + command)
-console.log(`❗❗ ${lenguajeGB['smsMensError2']()} ${usedPrefix + command} ❗❗`)
+console.log(`❗❗ Error en el comando ${usedPrefix + command} ❗❗`)
 console.log(e)}}
 
 handler.customPrefix = /menuff|menufreefire/i 
