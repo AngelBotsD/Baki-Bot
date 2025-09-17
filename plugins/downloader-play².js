@@ -1,5 +1,8 @@
 import fetch from "node-fetch";
 import yts from "yt-search";
+import { spawn } from "child_process";
+import fs from "fs";
+import path from "path";
 
 const APIS = [
   {
@@ -57,6 +60,23 @@ const getAudioUrl = async (videoUrl) => {
   throw lastError || new Error("Todas las APIs fallaron");
 };
 
+const convertToPtt = (input, output) => {
+  return new Promise((resolve, reject) => {
+    const ffmpeg = spawn("ffmpeg", [
+      "-y",
+      "-i", input,
+      "-c:a", "libopus",
+      "-b:a", "128k",
+      output
+    ]);
+
+    ffmpeg.on("close", (code) => {
+      if (code === 0) resolve(output);
+      else reject(new Error("Error al convertir a PTT"));
+    });
+  });
+};
+
 let handler = async (m, { conn }) => {
   const body = m.text?.trim();
   if (!body) return;
@@ -68,35 +88,46 @@ let handler = async (m, { conn }) => {
   try {
     await conn.sendMessage(m.chat, { react: { text: "🕒", key: m.key } });
 
-    const searchResults = await yts({ query, hl: 'es', gl: 'ES' });
+    const searchResults = await yts({ query, hl: "es", gl: "ES" });
     const video = searchResults.videos[0];
     if (!video) throw new Error("No se encontró el video");
     if (video.seconds > 600) throw "❌ El audio es muy largo (máximo 10 minutos)";
 
-    // Formatear duración
     const minutes = Math.floor(video.seconds / 60);
     const seconds = video.seconds % 60;
-    const durationFormatted = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    const durationFormatted = `${minutes}:${seconds.toString().padStart(2, "0")}`;
 
-    // Enviar miniatura con info estilo DOWNLOADER
     await conn.sendMessage(m.chat, {
       image: { url: video.thumbnail },
       caption: `📥 *𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*\n\n` +
                `🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${video.title}\n` +
-               `🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${video.author.name || 'Desconocido'}\n` +
+               `🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${video.author.name || "Desconocido"}\n` +
                `🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${durationFormatted}`,
     }, { quoted: m });
 
-    // Obtener audio priorizando yt1s
     const audioUrl = await getAudioUrl(video.url);
 
-    // Enviar audio como PTT
+    const tmpMp3 = path.join(process.cwd(), `${Date.now()}.mp3`);
+    const tmpOgg = path.join(process.cwd(), `${Date.now()}.ogg`);
+
+    const res = await fetch(audioUrl);
+    const fileStream = fs.createWriteStream(tmpMp3);
+    await new Promise((resolve, reject) => {
+      res.body.pipe(fileStream);
+      res.body.on("error", reject);
+      fileStream.on("finish", resolve);
+    });
+
+    await convertToPtt(tmpMp3, tmpOgg);
+
     await conn.sendMessage(m.chat, {
-      audio: { url: audioUrl },
-      mimetype: "audio/mpeg",
-      fileName: `${video.title.slice(0, 30)}.mp3`.replace(/[^\w\s.-]/gi, ''),
+      audio: fs.readFileSync(tmpOgg),
+      mimetype: "audio/ogg; codecs=opus",
       ptt: true
     }, { quoted: m });
+
+    fs.unlinkSync(tmpMp3);
+    fs.unlinkSync(tmpOgg);
 
     await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
 
@@ -104,8 +135,8 @@ let handler = async (m, { conn }) => {
     console.error("Error:", error);
     await conn.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
 
-    const errorMsg = typeof error === 'string' ? error : 
-      `❌ *Error:* ${error.message || 'Ocurrió un problema'}\n\n` +
+    const errorMsg = typeof error === "string" ? error : 
+      `❌ *Error:* ${error.message || "Ocurrió un problema"}\n\n` +
       `🔸 *Posibles soluciones:*\n` +
       `• Verifica el nombre de la canción\n` +
       `• Intenta con otro tema\n` +
