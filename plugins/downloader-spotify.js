@@ -26,8 +26,7 @@ const handler = async (m, { conn, text }) => {
     const info = `📥 *𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*\n\n` +
                  `🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${song.title}\n` +
                  `🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${song.artist}\n` +
-                 `🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${song.duration}\n\n` +
-                 `_*🎶 Enviando música...*_`;
+                 `🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${song.duration}\n\n` +`;
 
     // Descargar imagen de Spotify y redimensionar al mismo tamaño que el handler play (ej: 480x360)
     const imgRes = await fetch(imgUrl);
