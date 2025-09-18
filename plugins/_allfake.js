@@ -1,7 +1,7 @@
-import fetch from "node-fetch"
+import fs from "fs"
 
-const imgUrl = 'https://files.catbox.moe/jfov52.jpg'
-const thumb = await (await fetch(imgUrl)).buffer()
+const thumbPath = './src/img/catalogo.jpg'
+const thumb = fs.existsSync(thumbPath) ? fs.readFileSync(thumbPath) : null
 
 global.rcanal = {
   contextInfo: {
@@ -11,15 +11,15 @@ global.rcanal = {
       serverMessageId: 100,
       newsletterName: '',
     },
-    externalAdReply: { 
+    externalAdReply: {
       showAdAttribution: true,
       title: '𝗕𝗨𝗨 - 𝘽𝙊𝙏',
-      body: '',
+      body: 'Visita nuestro canal: ' + canal, // 👈 link en el texto
       previewType: "PHOTO",
-      thumbnail: thumb,   // 👈 buffer desde la URL
-      sourceUrl: canal,   // 👈 tu link clickeable
+      thumbnail: thumb,   // 👈 buffer local como en kick
+      sourceUrl: "",      // vacío para que WA normal dibuje el icono
       mediaType: 1,
-      renderLargerThumbnail: false
+      renderLargerThumbnail: true
     }
   }
 }
