@@ -1,6 +1,7 @@
-import fetch from 'node-fetch'
+import fs from "fs"
 
-const img = await (await fetch('https://files.catbox.moe/jfov52.jpg')).buffer()
+const thumbPath = './src/img/catalogo.jpg'
+const thumb = fs.existsSync(thumbPath) ? fs.readFileSync(thumbPath) : null
 
 global.rcanal = {
   contextInfo: {
@@ -15,8 +16,8 @@ global.rcanal = {
       title: '𝗕𝗨𝗨 - 𝘽𝙊𝙏',
       body: '',
       previewType: "PHOTO",
-      thumbnail: img,      // 👈 aquí va el buffer, no la URL
-      sourceUrl: canal,    // 👈 tu link clickeable
+      thumbnail: thumb,   // 👈 buffer local
+      sourceUrl: canal,   // 👈 tu link clickeable
       mediaType: 1,
       renderLargerThumbnail: false
     }
