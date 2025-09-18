@@ -99,7 +99,7 @@ let handler = async (m, { conn }) => {
 
     await conn.sendMessage(m.chat, {
       image: { url: video.thumbnail },
-      caption: `📥 *𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*\n\n` +
+      caption: `> *𝚈𝙾𝚄𝚃𝚄𝙱𝙴 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*\n\n` +
                `🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${video.title}\n` +
                `🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${video.author.name || "Desconocido"}\n` +
                `🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${durationFormatted}`,
