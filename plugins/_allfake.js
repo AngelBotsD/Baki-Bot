@@ -1,6 +1,6 @@
 import fs from "fs"
 
-const thumbPath = './storage/img/catalogo.jpg'
+const thumbPath = './storage/img/catalogo.png'
 const thumb = fs.existsSync(thumbPath) ? fs.readFileSync(thumbPath) : null
 
 global.rcanal = {
