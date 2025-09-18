@@ -1,3 +1,7 @@
+import fetch from 'node-fetch'
+
+const img = await (await fetch('https://files.catbox.moe/jfov52.jpg')).buffer()
+
 global.rcanal = {
   contextInfo: {
     isForwarded: true,
@@ -11,8 +15,8 @@ global.rcanal = {
       title: '𝗕𝗨𝗨 - 𝘽𝙊𝙏',
       body: '',
       previewType: "PHOTO",
-      thumbnailUrl: 'https://files.catbox.moe/jfov52.jpg', // 👈 tu link de imagen
-      sourceUrl: canal, // 👈 link clickeable
+      thumbnail: img,      // 👈 aquí va el buffer, no la URL
+      sourceUrl: canal,    // 👈 tu link clickeable
       mediaType: 1,
       renderLargerThumbnail: false
     }
