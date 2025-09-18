@@ -478,14 +478,14 @@ global.dfail = (type, m, conn, usedPrefix) => {
     }[type]
     if (msg) {
   await conn.sendMessage(m.chat, {
-    image: { url: img }, // URL de la imagen que pongas
+    image: { url: 'https://files.catbox.moe/5k7vwl.jpg' }, 
     caption: msg,
     contextInfo: {
       externalAdReply: {
         title: "𝗕𝗔𝗞𝗜 - 𝗕𝗢𝗧",
         body: "",
-        thumbnailUrl: img,
-        sourceUrl: '',
+        thumbnailUrl: 'https://files.catbox.moe/5k7vwl.jpg',
+        sourceUrl: 'https://files.catbox.moe/5k7vwl.jpg',
         mediaType: 1,
         renderLargerThumbnail: false
       }
