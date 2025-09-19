@@ -27,11 +27,10 @@ const getAudioUrl = async (videoUrl) => {
   for (const api of APIS) {
     try {
       console.log(`Probando API: ${api.name}`);
-      let audioUrl;
-      const res = await fetch(api.url(videoUrl), { timeout: 10000 });
+      const res = await fetch(api.url(videoUrl), { timeout: 15000 });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      audioUrl = await api.extract(data);
+      const audioUrl = api.extract(data);
       if (audioUrl) {
         console.log(`Éxito con API: ${api.name}`);
         return audioUrl;
@@ -50,12 +49,16 @@ const convertToPtt = (input, output) => {
     const ffmpeg = spawn("ffmpeg", [
       "-y",
       "-i", input,
-      "-ar", "48000",
-      "-ac", "1",
-      "-c:a", "libopus",
-      "-b:a", "128k",
+      "-vn",              // quitar video si lo trae
+      "-ar", "48000",     // frecuencia estándar WhatsApp
+      "-ac", "1",         // mono
+      "-c:a", "libopus",  // codec opus
+      "-b:a", "64k",      // bitrate compatible
+      "-f", "ogg",        // contenedor OGG
       output
     ]);
+
+    ffmpeg.stderr.on("data", d => console.log("FFmpeg:", d.toString()));
     ffmpeg.on("close", (code) => {
       if (code === 0) resolve(output);
       else reject(new Error("Error al convertir a PTT"));
@@ -86,15 +89,15 @@ let handler = async (m, { conn }) => {
     await conn.sendMessage(m.chat, {
       image: { url: video.thumbnail },
       caption: `> *𝚈𝙾𝚄𝚃𝚄𝙱𝙴 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*\n\n` +
-               `🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${video.title}\n` +
-               `🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${video.author.name || "Desconocido"}\n` +
-               `🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${durationFormatted}`,
+               `🎵 *Título:* ${video.title}\n` +
+               `🎤 *Artista:* ${video.author.name || "Desconocido"}\n` +
+               `🕑 *Duración:* ${durationFormatted}`,
     }, { quoted: m });
 
     const audioUrl = await getAudioUrl(video.url);
 
     const tmpMp3 = path.join(process.cwd(), `${Date.now()}.mp3`);
-    const tmpOpus = path.join(process.cwd(), `${Date.now()}.opus`);
+    const tmpOgg = path.join(process.cwd(), `${Date.now()}.ogg`);
 
     const res = await fetch(audioUrl);
     const fileStream = fs.createWriteStream(tmpMp3);
@@ -104,16 +107,16 @@ let handler = async (m, { conn }) => {
       fileStream.on("finish", resolve);
     });
 
-    await convertToPtt(tmpMp3, tmpOpus);
+    await convertToPtt(tmpMp3, tmpOgg);
 
     await conn.sendMessage(m.chat, {
-      audio: fs.readFileSync(tmpOpus),
+      audio: fs.readFileSync(tmpOgg),
       mimetype: "audio/ogg; codecs=opus",
       ptt: true
     }, { quoted: m });
 
     fs.unlinkSync(tmpMp3);
-    fs.unlinkSync(tmpOpus);
+    fs.unlinkSync(tmpOgg);
 
     await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
 
