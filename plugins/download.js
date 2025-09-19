@@ -9,7 +9,7 @@ const handler = async (msg, { conn, args, command }) => {
 
   if (!text) {
     return conn.sendMessage(chatId, {
-      text: `✳️ *Usa:*\n${pref}${command}`,
+      text: `🔗 *𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝚄𝚗 𝙻𝚒𝚗𝚔 𝙳𝚎 𝙵𝚊𝚌𝚎𝚋𝚘𝚘𝚔*`,
     }, { quoted: msg })
   }
 
@@ -22,7 +22,7 @@ const handler = async (msg, { conn, args, command }) => {
 
   try {
     await conn.sendMessage(chatId, {
-      react: { text: "⏳", key: msg.key }
+      react: { text: "🕒", key: msg.key }
     })
 
     const response = await axios.get(`https://api.dorratz.com/fbvideo?url=${encodeURIComponent(text)}`)
