@@ -9,7 +9,7 @@ const handler = async (msg, { conn, args, command }) => {
 
   if (!text) {
     return conn.sendMessage(chatId, {
-      text: `✳️ *Usa:*\n${pref}${command} <enlace>\nEj: *${pref}${command}* https://www.instagram.com/p/CCoI4DQBGVQ/`
+      text: `🔗 *𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝚞𝚗 𝚕𝚒𝚗𝚔 𝚍𝚎 𝙸𝚗𝚜𝚝𝚊𝚐𝚛𝚊𝚖*`
     }, { quoted: msg });
   }
 
