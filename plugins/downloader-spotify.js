@@ -86,5 +86,5 @@ const handler = async (msg, { conn, text }) => {
   }
 };
 
-handler.command = ["play3"];
+handler.command = ["spotify"];
 export default handler;
