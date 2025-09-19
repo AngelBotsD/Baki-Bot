@@ -9,7 +9,7 @@ const handler = async (msg, { conn, args, command }) => {
 
   if (!text) {
     return conn.sendMessage(chatId, {
-      text: `*𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝚞𝚗 𝙴𝚗𝚕𝚊𝚌𝚎 𝚍𝚎 𝚃𝚒𝚔𝚃𝚘𝚔*`
+      text: `🔗 *𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝚞𝚗 𝙴𝚗𝚕𝚊𝚌𝚎 𝚍𝚎 𝚃𝚒𝚔𝚃𝚘𝚔*`
     }, { quoted: msg });
   }
 
