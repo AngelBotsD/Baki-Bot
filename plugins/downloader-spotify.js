@@ -1,83 +1,89 @@
-import fetch from 'node-fetch';
-import axios from 'axios';
+import fetch from "node-fetch";
+import axios from "axios";
 
 const apis = {
-  delirius: 'https://delirius-apiofc.vercel.app/',
-  siputzx: 'https://api.siputzx.my.id/api/',
-  ryzen: 'https://apidl.asepharyana.cloud/',
-  rioo: 'https://restapi.apibotwa.biz.id/',
-  random1: 'https://api.agungny.my.id/api/'
+  delirius: "https://delirius-apiofc.vercel.app/",
+  ryzen: "https://apidl.asepharyana.cloud/",
+  rioo: "https://restapi.apibotwa.biz.id/"
 };
 
-const handler = async (m, {conn, command, args, text, usedPrefix}) => {
+const handler = async (msg, { conn, text }) => {
+  const chatId = msg.key.remoteJid;
 
-    if (!text) return m.reply(`_*[ ⚠️ ] Agrega lo que quieres Descargar en Spotify*_\n\n_Ejemplo:_\n.spotify Chica Paranormal.`);
+  await conn.sendMessage(chatId, {
+    react: { text: "🕒", key: msg.key }
+  });
 
-    try { 
-        let { data } = await axios.get(`${apis.delirius}search/spotify?q=${encodeURIComponent(text)}&limit=10`);
+  if (!text) {
+    return conn.sendMessage(chatId, {
+      text: `⚠️ *Debes escribir el nombre de una canción.*\n📌 Ejemplo:\n✳️ \`.play3 Marshmello - Alone\``
+    }, { quoted: msg });
+  }
 
-        if (!data.data || data.data.length === 0) {
-            throw `_*[ ⚠️ ] No se encontraron resultados para "${text}" en Spotify.*_`;
-        }
+  try {
+    const res = await axios.get(`${apis.delirius}search/spotify?q=${encodeURIComponent(text)}&limit=1`);
+    const result = res.data.data?.[0];
+    if (!result) throw "❌ No se encontraron resultados en Spotify.";
 
-        const song = data.data[0];
-        const img = song.image;
-        const url = song.url;
+    const { title, artist, duration, url, image } = result;
 
-        // ⚡ Info igual que .play
-        const info = `> *𝚂𝙿𝙾𝚃𝙸𝙵𝚈 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*\n\n` +
-                     `🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${song.title}\n` +
-                     `🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${song.artist}\n` +
-                     `🕒 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${song.duration}`;
+    const info = `> *𝚂𝙿𝙾𝚃𝙸𝙵𝚈 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*\n\n` +
+                 `🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${title}\n` +
+                 `🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artist}\n` +
+                 `🕒 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}`;
 
-        await conn.sendFile(m.chat, img, 'imagen.jpg', info, m);
+    await conn.sendMessage(chatId, {
+      image: { url: image },
+      caption: info
+    }, { quoted: msg });
 
-        //＼／＼／＼／＼／＼／ DESCARGAR ＼／＼／＼／＼／＼／
+    const sendAudio = async (link) => {
+      await conn.sendMessage(chatId, {
+        audio: { url: link },
+        fileName: `${title}.mp3`,
+        mimetype: "audio/mpeg"
+      }, { quoted: msg });
 
+      await conn.sendMessage(chatId, {
+        react: { text: "✅", key: msg.key }
+      });
+    };
+
+    try {
+      const r1 = await fetch(`${apis.delirius}download/spotifydl?url=${encodeURIComponent(url)}`);
+      const j1 = await r1.json();
+      return await sendAudio(j1.data.url);
+    } catch (e1) {
+      try {
+        const r2 = await fetch(`${apis.delirius}download/spotifydlv3?url=${encodeURIComponent(url)}`);
+        const j2 = await r2.json();
+        return await sendAudio(j2.data.url);
+      } catch (e2) {
         try {
-            const api1 = `${apis.delirius}download/spotifydl?url=${encodeURIComponent(url)}`;
-            const response1 = await fetch(api1);
-            const result1 = await response1.json();
-
-            const downloadUrl1 = result1.data.url;
-            await conn.sendMessage(m.chat, { audio: { url: downloadUrl1 }, fileName: 'audio.mp3', mimetype: 'audio/mpeg', quoted: m });
-        } catch (e1) {
-            try {
-                const api2 = `${apis.delirius}download/spotifydlv3?url=${encodeURIComponent(url)}`;
-                const response2 = await fetch(api2);
-                const result2 = await response2.json();
-
-                const downloadUrl2 = result2.data.url;
-                await conn.sendMessage(m.chat, { audio: { url: downloadUrl2 }, fileName: 'audio.mp3', mimetype: 'audio/mpeg', quoted: m });
-            } catch (e2) {
-                try {
-                    const api3 = `${apis.rioo}api/spotify?url=${encodeURIComponent(url)}`;
-                    const response3 = await fetch(api3);
-                    const result3 = await response3.json();
-
-                    const downloadUrl3 = result3.data.response;
-                    await conn.sendMessage(m.chat, { audio: { url: downloadUrl3 }, fileName: 'audio.mp3', mimetype: 'audio/mpeg', quoted: m });
-                } catch (e3) {
-                    try {
-                        const api4 = `${apis.ryzen}api/downloader/spotify?url=${encodeURIComponent(url)}`;
-                        const response4 = await fetch(api4);
-                        const result4 = await response4.json();
-
-                        const downloadUrl4 = result4.link;
-                        await conn.sendMessage(m.chat, { audio: { url: downloadUrl4 }, fileName: 'audio.mp3', mimetype: 'audio/mpeg', quoted: m });
-                    } catch (e4) {
-                        m.reply(`❌ Ocurrió un error al descargar el audio\nError: ${e4.message}`);
-                    }
-                }
-            }
+          const r3 = await fetch(`${apis.rioo}api/spotify?url=${encodeURIComponent(url)}`);
+          const j3 = await r3.json();
+          return await sendAudio(j3.data.response);
+        } catch (e3) {
+          try {
+            const r4 = await fetch(`${apis.ryzen}api/downloader/spotify?url=${encodeURIComponent(url)}`);
+            const j4 = await r4.json();
+            return await sendAudio(j4.link);
+          } catch (e4) {
+            await conn.sendMessage(chatId, {
+              text: `❌ *No se pudo descargar el audio.*\n🔹 _Error:_ ${e4.message}`
+            }, { quoted: msg });
+          }
         }
-    } catch (e) {
-        await conn.reply(m.chat, `> Intenta Nuevamente.`, m);
-        console.log(e);
+      }
     }
+
+  } catch (err) {
+    console.error("❌ Error en el comando .play3:", err);
+    await conn.sendMessage(chatId, {
+      text: `❌ *Ocurrió un error:* ${err.message || err}`
+    }, { quoted: msg });
+  }
 };
 
-handler.tags = ['downloader']; 
-handler.help = ['spotify'];
-handler.command = ['spotify'];
+handler.command = ["spotify"];
 export default handler;
