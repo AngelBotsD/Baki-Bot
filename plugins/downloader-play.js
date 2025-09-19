@@ -19,7 +19,7 @@ const handler = async (msg, { conn, text }) => {
   }
 
   await conn.sendMessage(msg.key.remoteJid, {
-    react: { text: "⏳", key: msg.key }
+    react: { text: "🕒", key: msg.key }
   })
 
   const res = await yts(text)
