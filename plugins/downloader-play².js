@@ -6,13 +6,9 @@ import path from "path";
 
 const APIS = [
   {
-    name: "yt1s",
-    searchUrl: (videoUrl) => `https://yt1s.io/api/ajaxSearch?q=${encodeURIComponent(videoUrl)}`,
-    convertUrl: (vid, k) => `https://yt1s.io/api/ajaxConvert?vid=${vid}&k=${k}&quality=64`,
-    extract: async (data) => {
-      const k = data?.links?.mp3?.auto?.k;
-      return k ? `https://yt1s.io/api/ajaxConvert?vid=${data.vid}&k=${k}&quality=64` : null;
-    }
+    name: "neoxr",
+    url: (videoUrl) => `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`,
+    extract: (data) => data?.data?.url
   },
   {
     name: "zenkey",
@@ -34,17 +30,10 @@ const getAudioUrl = async (videoUrl) => {
       console.log(`Probando API: ${api.name}`);
       let audioUrl;
 
-      if (api.name === "yt1s") {
-        const searchRes = await fetch(api.searchUrl(videoUrl), { timeout: 5000 });
-        if (!searchRes.ok) throw new Error(`HTTP ${searchRes.status}`);
-        const data = await searchRes.json();
-        audioUrl = await api.extract(data);
-      } else {
-        const res = await fetch(api.url(videoUrl), { timeout: 5000 });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        audioUrl = await api.extract(data);
-      }
+      const res = await fetch(api.url(videoUrl), { timeout: 10000 });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      audioUrl = await api.extract(data);
 
       if (audioUrl) {
         console.log(`Éxito con API: ${api.name}`);
