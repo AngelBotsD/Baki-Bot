@@ -16,7 +16,7 @@ const handler = async (msg, { conn, args, command }) => {
   // ✅ Regex corregida
   if (!text.match(/(facebook\.com|fb\.watch)/gi)) {
     return conn.sendMessage(chatId, {
-      text: `❌ *Enlace inválido.*\n\n✳️ *Usa:*\n${pref}${command} <enlace>\n📌 Ej: *${pref}${command}* https://fb.watch/ncowLHMp-x/`,
+      text: `🚩 *𝙽𝚘 𝚜𝚎 𝚎𝚗𝚌𝚘𝚗𝚝𝚛𝚊𝚛𝚘𝚗 𝚛𝚎𝚜𝚞𝚕𝚝𝚊𝚍𝚘𝚜.*`,
     }, { quoted: msg })
   }
 
