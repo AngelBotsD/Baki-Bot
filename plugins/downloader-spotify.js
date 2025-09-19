@@ -11,7 +11,7 @@ const handler = async (msg, { conn, text }) => {
   const chatId = msg.key.remoteJid;
 
   await conn.sendMessage(chatId, {
-    react: { text: "🕒", key: msg.key }
+    react: { text: "🎶", key: msg.key }
   });
 
   if (!text) {
@@ -25,13 +25,16 @@ const handler = async (msg, { conn, text }) => {
     const result = res.data.data?.[0];
     if (!result) throw "❌ No se encontraron resultados en Spotify.";
 
-    const { title, artist, duration, url, image } = result;
+    const { title, artist, duration, publish, popularity, url, image } = result;
 
-    // 📌 Plantilla pedida
-    const info = `> *𝚂𝙿𝙾𝚃𝙸𝙵𝚈 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*\n\n` +
-                 `🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${title}\n` +
-                 `🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artist}\n` +
-                 `🕒 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}`;
+    const info = `🎵 *Resultado encontrado:*\n\n` +
+                 `📌 *Título:* ${title}\n` +
+                 `🎤 *Artista:* ${artist}\n` +
+                 `⏱️ *Duración:* ${duration}\n` +
+                 `📅 *Publicado:* ${publish}\n` +
+                 `🔥 *Popularidad:* ${popularity}\n` +
+                 `🔗 *Enlace:* ${url}\n\n` +
+                 `✨ *La Suki Bot está enviando tu música...*`;
 
     await conn.sendMessage(chatId, {
       image: { url: image },
@@ -86,5 +89,5 @@ const handler = async (msg, { conn, text }) => {
   }
 };
 
-handler.command = ["spotify"];
+handler.command = ["play3"];
 export default handler;
