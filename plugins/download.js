@@ -13,7 +13,6 @@ const handler = async (msg, { conn, args, command }) => {
     }, { quoted: msg })
   }
 
-  // ✅ Regex corregida
   if (!text.match(/(facebook\.com|fb\.watch)/gi)) {
     return conn.sendMessage(chatId, {
       text: `🚩 *𝙽𝚘 𝚜𝚎 𝚎𝚗𝚌𝚘𝚗𝚝𝚛𝚊𝚛𝚘𝚗 𝚛𝚎𝚜𝚞𝚕𝚝𝚊𝚍𝚘𝚜.*`,
