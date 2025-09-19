@@ -1,65 +1,93 @@
-import axios from 'axios'
-import fetch from 'node-fetch'
+import fetch from "node-fetch";
+import axios from "axios";
 
-let handler = async (m, { conn, args, text, isPrems, isOwner, usedPrefix, command }) => {
-  if (!args || !args[0]) return conn.reply(m.chat, `*• Ingresa un enlace Spotify*`, m)
-  let user = global.db.data.users[m.sender]
-  await m.react('🕓')
+const apis = {
+  delirius: "https://delirius-apiofc.vercel.app/",
+  ryzen: "https://apidl.asepharyana.cloud/",
+  rioo: "https://restapi.apibotwa.biz.id/"
+};
+
+const handler = async (msg, { conn, text }) => {
+  const chatId = msg.key.remoteJid;
+
+  await conn.sendMessage(chatId, {
+    react: { text: "🎶", key: msg.key }
+  });
+
+  if (!text) {
+    return conn.sendMessage(chatId, {
+      text: `⚠️ *Debes escribir el nombre de una canción.*\n📌 Ejemplo:\n✳️ \`.play3 Marshmello - Alone\``
+    }, { quoted: msg });
+  }
+
   try {
-    let response = await axios.get(`https://api.cafirexos.com/api/spotifyinfo?url=${args[0]}`)
-    let { title, artist, album, year, thumbnail, url } = response.data.spty.resultado
-    let downloadLink = response.data.spty.download.audio
-    let img = await (await fetch(thumbnail)).buffer()
+    const res = await axios.get(`${apis.delirius}search/spotify?q=${encodeURIComponent(text)}&limit=1`);
+    const result = res.data.data?.[0];
+    if (!result) throw "❌ No se encontraron resultados en Spotify.";
 
-    let txt = `*乂  S P O T I F Y  -  D O W N L O A D*\n\n`
-        txt += `	✩   *Titulo* : ${title}\n`
-        txt += `	✩   *Artista* : ${artist}\n`
-        txt += `	✩   *Album* : ${album}\n`
-        txt += `	✩   *Fecha de lanzamiento ∙* ${year}\n\n`
-        txt += `*- ↻ El audio se esta enviando espera un momento, soy lenta. . .*`
-await conn.sendFile(m.chat, img, 'thumbnail.jpg', txt, m)
-await conn.sendFile(m.chat, downloadLink, title + '.mp3', `
-    `.trim(), m, false, { mimetype: 'audio/mpeg', asDocument: user.useDocument })
-await m.react('✅')
-} catch {
-try {
-let response = await axios.get(`https://api.botcahx.eu.org/api/download/spotify?url=${args[0]}&apikey=${botcahx}`)
-    let { title, artist, thumbnail, url, duration, preview } = response.data.result.data
-    let downloadLink = response.data.result.data.url
-    let img = await (await fetch(thumbnail)).buffer()
+    const { title, artist, duration, publish, popularity, url, image } = result;
 
-    let txt = `*乂  S P O T I F Y  -  D O W N L O A D*\n\n`
-        txt += `	✩   *Titulo* : ${title}\n`
-        txt += `	✩   *Artista* : ${artist}\n`
-        txt += `	✩   *Duración* : ${duration}\n\n`
-        txt += `*- ↻ El audio se esta enviando espera un momento, soy lenta. . .*`
-await conn.sendFile(m.chat, img, 'thumbnail.jpg', txt, m)
-await conn.sendFile(m.chat, downloadLink, title + '.mp3', `
-    `.trim(), m, false, { mimetype: 'audio/mpeg', asDocument: user.useDocument })
-await m.react('✅')
-} catch {
-try {
-    let response = await axios.get(`https://www.guruapi.tech/api/spotifyinfo?text=${args[0]}`)
-    let { title, artist, album, year, thumbnail, url } = response.data.spty.results
-    let downloadLink = response.data.spty.download.audio
-    let img = await (await fetch(thumbnail)).buffer()
+    const info = `🎵 *Resultado encontrado:*\n\n` +
+                 `📌 *Título:* ${title}\n` +
+                 `🎤 *Artista:* ${artist}\n` +
+                 `⏱️ *Duración:* ${duration}\n` +
+                 `📅 *Publicado:* ${publish}\n` +
+                 `🔥 *Popularidad:* ${popularity}\n` +
+                 `🔗 *Enlace:* ${url}\n\n` +
+                 `✨ *La Suki Bot está enviando tu música...*`;
 
-    let txt = `*乂  S P O T I F Y  -  D O W N L O A D*\n\n`
-        txt += `	✩   *Titulo* : ${title}\n`
-        txt += `	✩   *Artista* : ${artist}\n`
-        txt += `	✩   *Album* : ${album}\n`
-        txt += `	✩   *Fecha de lanzamiento ∙* ${year}\n\n`
-        txt += `*- ↻ El audio se esta enviando espera un momento, soy lenta. . .*`
+    await conn.sendMessage(chatId, {
+      image: { url: image },
+      caption: info
+    }, { quoted: msg });
 
-await await conn.sendFile(m.chat, img, 'thumbnail.jpg', txt, m)
-await conn.sendFile(m.chat, downloadLink, title + '.mp3', `
-    `.trim(), m, false, { mimetype: 'audio/mpeg', asDocument: user.useDocument })
-await m.react('✅')
-} catch {
-await m.react('✖️')
-}}}}
-handler.tags = ['downloader']
-handler.help = ['spotifydl *<url spotify>*']
-handler.command = ['spotifydl']
-//handler.limit = 1
-export default handler
+    const sendAudio = async (link) => {
+      await conn.sendMessage(chatId, {
+        audio: { url: link },
+        fileName: `${title}.mp3`,
+        mimetype: "audio/mpeg"
+      }, { quoted: msg });
+    };
+
+    // Intento 1
+    try {
+      const r1 = await fetch(`${apis.delirius}download/spotifydl?url=${encodeURIComponent(url)}`);
+      const j1 = await r1.json();
+      return await sendAudio(j1.data.url);
+    } catch (e1) {
+      // Intento 2
+      try {
+        const r2 = await fetch(`${apis.delirius}download/spotifydlv3?url=${encodeURIComponent(url)}`);
+        const j2 = await r2.json();
+        return await sendAudio(j2.data.url);
+      } catch (e2) {
+        // Intento 3
+        try {
+          const r3 = await fetch(`${apis.rioo}api/spotify?url=${encodeURIComponent(url)}`);
+          const j3 = await r3.json();
+          return await sendAudio(j3.data.response);
+        } catch (e3) {
+          // Intento 4
+          try {
+            const r4 = await fetch(`${apis.ryzen}api/downloader/spotify?url=${encodeURIComponent(url)}`);
+            const j4 = await r4.json();
+            return await sendAudio(j4.link);
+          } catch (e4) {
+            await conn.sendMessage(chatId, {
+              text: `❌ *No se pudo descargar el audio.*\n🔹 _Error:_ ${e4.message}`
+            }, { quoted: msg });
+          }
+        }
+      }
+    }
+
+  } catch (err) {
+    console.error("❌ Error en el comando .play3:", err);
+    await conn.sendMessage(chatId, {
+      text: `❌ *Ocurrió un error:* ${err.message || err}`
+    }, { quoted: msg });
+  }
+};
+
+handler.command = ["play3"];
+export default handler;
