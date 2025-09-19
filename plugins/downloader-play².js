@@ -21,7 +21,7 @@ const handler = async (msg, { conn, text }) => {
 
   // reacción ⏳
   await conn.sendMessage(msg.key.remoteJid, {
-    react: { text: "⏳", key: msg.key }
+    react: { text: "🕒", key: msg.key }
   });
 
   // búsqueda
@@ -41,7 +41,7 @@ const handler = async (msg, { conn, text }) => {
   try {
     // manda preview con info
     const infoMsg = `
-*𝚈𝙾𝚄𝚃𝚄𝙱𝙴 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
+> *𝚈𝙾𝚄𝚃𝚄𝙱𝙴 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
 🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${title}
 🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
