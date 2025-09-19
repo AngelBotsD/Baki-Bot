@@ -58,7 +58,7 @@ const handler = async (msg, { conn, text }) => {
     const tmp = path.join(process.cwd(), "tmp")
     if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
     const inFile = path.join(tmp, `${Date.now()}_in.m4a`)
-    const outFile = path.join(tmp, `${Date.now()}_out.opus`)
+    const outFile = path.join(tmp, `${Date.now()}_out.ogg`)
 
     const dl = await axios.get(r.data.data.url, { responseType: "stream" })
     await streamPipe(dl.data, fs.createWriteStream(inFile))
@@ -67,7 +67,7 @@ const handler = async (msg, { conn, text }) => {
       ffmpeg(inFile)
         .audioCodec("libopus")
         .audioBitrate("128k")
-        .toFormat("opus")
+        .toFormat("ogg")
         .save(outFile)
         .on("end", res)
         .on("error", rej)
