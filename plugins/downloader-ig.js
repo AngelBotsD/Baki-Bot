@@ -9,13 +9,13 @@ const handler = async (msg, { conn, args, command }) => {
 
   if (!text) {
     return conn.sendMessage(chatId, {
-      text: `🔗 *𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝚞𝚗 𝚕𝚒𝚗𝚔 𝚍𝚎 𝙸𝚗𝚜𝚝𝚊𝚐𝚛𝚊𝚖*`
+      text: `✳️ *Usa:*\n${pref}${command} <enlace>\nEj: *${pref}${command}* https://www.instagram.com/p/CCoI4DQBGVQ/`
     }, { quoted: msg });
   }
 
   try {
     await conn.sendMessage(chatId, {
-      react: { text: "🕒", key: msg.key }
+      react: { text: "⏳", key: msg.key }
     });
 
     const apiUrl = `https://api.dorratz.com/igdl?url=${encodeURIComponent(text)}`;
@@ -28,39 +28,48 @@ const handler = async (msg, { conn, args, command }) => {
       }, { quoted: msg });
     }
 
-    const caption = ``;
+    const caption = `🎬 *𝑪𝒐𝒏𝒕𝒆𝒏𝒊𝒅𝒐 IG 𝒅𝒆𝒔𝒄𝒂𝒓𝒈𝒂𝒅𝒐*\n𖠁 *API:* api.dorratz.com\n────────────\n🤖 _La Suki Bot_`;
 
     const tmpDir = path.resolve("./tmp");
     if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
 
     for (const item of data) {
-      const filePath = path.join(tmpDir, `ig-${Date.now()}-${Math.floor(Math.random() * 1000)}.mp4`);
+      const ext = item.type === "image" ? "jpg" : "mp4";
+      const filePath = path.join(tmpDir, `ig-${Date.now()}-${Math.floor(Math.random() * 1000)}.${ext}`);
 
-      const videoRes = await axios.get(item.url, { responseType: "stream" });
+      const res = await axios.get(item.url, { responseType: "stream" });
       const writer = fs.createWriteStream(filePath);
 
       await new Promise((resolve, reject) => {
-        videoRes.data.pipe(writer);
+        res.data.pipe(writer);
         writer.on("finish", resolve);
         writer.on("error", reject);
       });
 
-      const stats = fs.statSync(filePath);
-      const sizeMB = stats.size / (1024 * 1024);
+      if (item.type === "video") {
+        const stats = fs.statSync(filePath);
+        const sizeMB = stats.size / (1024 * 1024);
 
-      if (sizeMB > 99) {
-        fs.unlinkSync(filePath);
+        if (sizeMB > 99) {
+          fs.unlinkSync(filePath);
+          await conn.sendMessage(chatId, {
+            text: `❌ Un video pesa ${sizeMB.toFixed(2)}MB y excede el límite de 99MB.`
+          }, { quoted: msg });
+          continue;
+        }
+
         await conn.sendMessage(chatId, {
-          text: `❌ Un video pesa ${sizeMB.toFixed(2)}MB y excede el límite de 99MB.`
+          video: fs.readFileSync(filePath),
+          mimetype: "video/mp4",
+          caption
         }, { quoted: msg });
-        continue;
+      } else {
+        await conn.sendMessage(chatId, {
+          image: fs.readFileSync(filePath),
+          mimetype: "image/jpeg",
+          caption
+        }, { quoted: msg });
       }
-
-      await conn.sendMessage(chatId, {
-        video: fs.readFileSync(filePath),
-        mimetype: "video/mp4",
-        caption
-      }, { quoted: msg });
 
       fs.unlinkSync(filePath);
     }
