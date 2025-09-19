@@ -35,9 +35,25 @@ const handler = async (msg, { conn, text }) => {
     );
   }
 
-  const { url: videoUrl, title } = video;
+  const { url: videoUrl, title, timestamp: duration, author, thumbnail } = video;
+  const artista = author.name;
 
   try {
+    // manda preview con info
+    const infoMsg = `
+*𝚈𝙾𝚄𝚃𝚄𝙱𝙴 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
+
+🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${title}
+🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
+🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
+`.trim();
+
+    await conn.sendMessage(
+      msg.key.remoteJid,
+      { image: { url: thumbnail }, caption: infoMsg },
+      { quoted: msg }
+    );
+
     // descarga directa de audio
     const api = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`;
     const r = await axios.get(api);
@@ -72,7 +88,7 @@ const handler = async (msg, { conn, text }) => {
         audio: buffer,
         mimetype: "audio/mpeg",
         fileName: `${title}.mp3`,
-        ptt: false // si quieres que sea nota de voz cámbialo a true
+        ptt: false
       },
       { quoted: msg }
     );
