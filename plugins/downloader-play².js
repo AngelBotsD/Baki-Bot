@@ -38,30 +38,29 @@ const getAudioUrl = async (videoUrl) => {
     } catch (e) {
       console.error(`Error con API ${api.name}:`, e.message);
       lastError = e;
-      continue;
     }
   }
   throw lastError || new Error("Todas las APIs fallaron");
 };
 
-const convertToPtt = (input, output) => {
+const convertToWhatsAppPtt = (input, output) => {
   return new Promise((resolve, reject) => {
     const ffmpeg = spawn("ffmpeg", [
       "-y",
       "-i", input,
-      "-vn",              // quitar video si lo trae
-      "-ar", "48000",     // frecuencia estándar WhatsApp
-      "-ac", "1",         // mono
-      "-c:a", "libopus",  // codec opus
-      "-b:a", "64k",      // bitrate compatible
-      "-f", "ogg",        // contenedor OGG
+      "-vn",
+      "-ar", "16000",      // WhatsApp exige 16kHz en notas de voz
+      "-ac", "1",          // mono
+      "-c:a", "libopus",
+      "-b:a", "32k",       // bitrate bajo y estable para PTT
+      "-f", "ogg",
       output
     ]);
 
     ffmpeg.stderr.on("data", d => console.log("FFmpeg:", d.toString()));
     ffmpeg.on("close", (code) => {
       if (code === 0) resolve(output);
-      else reject(new Error("Error al convertir a PTT"));
+      else reject(new Error("Error al convertir a WhatsApp PTT"));
     });
   });
 };
@@ -107,7 +106,7 @@ let handler = async (m, { conn }) => {
       fileStream.on("finish", resolve);
     });
 
-    await convertToPtt(tmpMp3, tmpOgg);
+    await convertToWhatsAppPtt(tmpMp3, tmpOgg);
 
     await conn.sendMessage(m.chat, {
       audio: fs.readFileSync(tmpOgg),
