@@ -18,12 +18,10 @@ const handler = async (msg, { conn, text }) => {
     )
   }
 
-  // reacción de carga
   await conn.sendMessage(msg.key.remoteJid, {
-    react: { text: "🕒", key: msg.key }
+    react: { text: "⏳", key: msg.key }
   })
 
-  // búsqueda
   const res = await yts(text)
   const video = res.videos[0]
   if (!video) {
@@ -34,21 +32,18 @@ const handler = async (msg, { conn, text }) => {
     )
   }
 
-  const { url: videoUrl, title, timestamp: duration, views, author } = video
-  const viewsFmt = views.toLocaleString()
+  const { url: videoUrl, title, timestamp: duration, author } = video
+  const artista = author.name
 
   const caption = `
-❦ BAJI 𝑩𝑶𝑻❦
+> *𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
-🎬 𝑻𝒊𝒕𝒖𝒍𝒐: ${title}
-🕑 𝑫𝒖𝒓𝒂𝒄𝒊𝒐𝒏: ${duration}
-👁‍🗨 𝑽𝒊𝒔𝒕𝒂𝒔: ${viewsFmt}
-👤 𝑨𝒖𝒕𝒐𝒓: ${author.name}
-🔗 𝑳𝒊𝒏𝒌: ${videoUrl}
+🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${title}
+🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
+🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
 `.trim()
 
   try {
-    // busca calidad disponible
     const qualities = ["720p", "480p", "360p"]
     let url = null
 
