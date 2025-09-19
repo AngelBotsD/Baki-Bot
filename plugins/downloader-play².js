@@ -49,13 +49,16 @@ const getAudioUrl = async (videoUrl) => {
   throw lastError || new Error("Todas las APIs fallaron");
 };
 
+// ✅ FIX: conversión a PTT compatible con WhatsApp
 const convertToPtt = (input, output) => {
   return new Promise((resolve, reject) => {
     const ffmpeg = spawn("ffmpeg", [
       "-y",
       "-i", input,
-      "-c:a", "libopus",
-      "-b:a", "128k",
+      "-ar", "48000",      // Frecuencia correcta
+      "-ac", "1",          // Mono
+      "-c:a", "libopus",   // Codec WhatsApp
+      "-b:a", "128k",      // Calidad aceptable
       output
     ]);
 
@@ -109,10 +112,12 @@ let handler = async (m, { conn }) => {
 
     await convertToPtt(tmpMp3, tmpOgg);
 
+    // ✅ Mandando el audio como nota de voz (PTT)
     await conn.sendMessage(m.chat, {
       audio: fs.readFileSync(tmpOgg),
       mimetype: "audio/ogg; codecs=opus",
-      ptt: true
+      ptt: true,
+      caption: "🎤 Mandando el audio como PTT"
     }, { quoted: m });
 
     fs.unlinkSync(tmpMp3);
