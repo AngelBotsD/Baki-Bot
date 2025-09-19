@@ -19,12 +19,10 @@ const handler = async (msg, { conn, text }) => {
     );
   }
 
-  // reacción ⏳
   await conn.sendMessage(msg.key.remoteJid, {
     react: { text: "🕒", key: msg.key }
   });
 
-  // búsqueda
   const res = await yts(text);
   const video = res.videos[0];
   if (!video) {
@@ -39,7 +37,6 @@ const handler = async (msg, { conn, text }) => {
   const artista = author.name;
 
   try {
-    // manda preview con info
     const infoMsg = `
 > *𝚈𝙾𝚄𝚃𝚄𝙱𝙴 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
@@ -54,7 +51,6 @@ const handler = async (msg, { conn, text }) => {
       { quoted: msg }
     );
 
-    // descarga directa de audio
     const api = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`;
     const r = await axios.get(api);
     if (!r.data?.status || !r.data.data?.url) throw new Error("No se pudo obtener el audio");
@@ -64,11 +60,9 @@ const handler = async (msg, { conn, text }) => {
     const inFile = path.join(tmp, `${Date.now()}_in.m4a`);
     const outFile = path.join(tmp, `${Date.now()}_out.mp3`);
 
-    // baja audio original
     const dl = await axios.get(r.data.data.url, { responseType: "stream" });
     await streamPipe(dl.data, fs.createWriteStream(inFile));
 
-    // convierte a mp3
     await new Promise((res, rej) =>
       ffmpeg(inFile)
         .audioCodec("libmp3lame")
@@ -81,7 +75,6 @@ const handler = async (msg, { conn, text }) => {
 
     const buffer = fs.readFileSync(outFile);
 
-    // envía audio directamente
     await conn.sendMessage(
       msg.key.remoteJid,
       {
@@ -93,11 +86,9 @@ const handler = async (msg, { conn, text }) => {
       { quoted: msg }
     );
 
-    // limpia
     fs.unlinkSync(inFile);
     fs.unlinkSync(outFile);
 
-    // reacción ✅
     await conn.sendMessage(msg.key.remoteJid, {
       react: { text: "✅", key: msg.key }
     });
