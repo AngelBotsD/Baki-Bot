@@ -1,50 +1,81 @@
-import { instagramdl } from '@bochilteam/scraper'
+import axios from "axios";
+import fs from "fs";
+import path from "path";
 
-let handler = async (m, { args, conn }) => { 
-  if (!args[0]) {
-    return conn.reply(m.chat, '🔗 *𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝚞𝚗 𝚕𝚒𝚗𝚔 𝚍𝚎 𝙸𝚗𝚜𝚝𝚊𝚐𝚛𝚊𝚖*', m);
-  }
+const handler = async (msg, { conn, args, command }) => {
+  const chatId = msg.key.remoteJid;
+  const text = args.join(" ");
+  const pref = global.prefixes?.[0] || ".";
 
-  const url = args[0];
-  if (!url.includes('instagram.com')) {
-    return conn.reply(m.chat, '𝙴𝚕 𝚟𝚒́𝚍𝚎𝚘 𝚙𝚛𝚘𝚙𝚘𝚛𝚌𝚒𝚘𝚗𝚊𝚍𝚘 𝚗𝚘 𝚎𝚜 𝚍𝚎 𝙸𝚗𝚜𝚝𝚊𝚐𝚛𝚊𝚖', m);
+  if (!text) {
+    return conn.sendMessage(chatId, {
+      text: `✳️ *Usa:*\n${pref}${command} <enlace>\nEj: *${pref}${command}* https://www.instagram.com/p/CCoI4DQBGVQ/`
+    }, { quoted: msg });
   }
 
   try {
-    await m.react('⏳');
-    conn.reply(m.chat, `🕒 *Enviando Video...*`, m, {
-      contextInfo: {
-        externalAdReply: {
-          mediaUrl: null,
-          mediaType: 1,
-          showAdAttribution: true,
-          title: botname,
-          body: wm,
-          previewType: 0,
-          thumbnail: icons,
-          sourceUrl: channel
-        }
-      }
+    await conn.sendMessage(chatId, {
+      react: { text: "⏳", key: msg.key }
     });
 
-    let res = await igdl(args[0]);
-    let data = res.data;
+    const apiUrl = `https://api.dorratz.com/igdl?url=${encodeURIComponent(text)}`;
+    const response = await axios.get(apiUrl);
+    const { data } = response.data;
 
-    if (data.length > 0) {
-      let media = data[0]; 
-      await conn.sendFile(m.chat, media.url, 'instagram.mp4', fkontak);
-    } else {
-      conn.reply(m.chat, '⚙️ No se encontraron medios en el enlace proporcionado.', m);
+    if (!data || data.length === 0) {
+      return conn.sendMessage(chatId, {
+        text: "❌ *No se pudo obtener el contenido de Instagram.*"
+      }, { quoted: msg });
     }
 
-  } catch (error) {
-    await m.react('❌');
-    conn.reply(m.chat, '⚙️ 𝙾𝚌𝚞𝚛𝚛𝚒𝚘́ 𝚞𝚗 𝚎𝚛𝚛𝚘𝚛.', m, fake);
+    const caption = `🎬 *𝑪𝒐𝒏𝒕𝒆𝒏𝒊𝒅𝒐 IG 𝒅𝒆𝒔𝒄𝒂𝒓𝒈𝒂𝒅𝒐*\n𖠁 *API:* api.dorratz.com\n────────────\n🤖 _La Suki Bot_`;
+
+    const tmpDir = path.resolve("./tmp");
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+
+    for (const item of data) {
+      const filePath = path.join(tmpDir, `ig-${Date.now()}-${Math.floor(Math.random() * 1000)}.mp4`);
+
+      const videoRes = await axios.get(item.url, { responseType: "stream" });
+      const writer = fs.createWriteStream(filePath);
+
+      await new Promise((resolve, reject) => {
+        videoRes.data.pipe(writer);
+        writer.on("finish", resolve);
+        writer.on("error", reject);
+      });
+
+      const stats = fs.statSync(filePath);
+      const sizeMB = stats.size / (1024 * 1024);
+
+      if (sizeMB > 99) {
+        fs.unlinkSync(filePath);
+        await conn.sendMessage(chatId, {
+          text: `❌ Un video pesa ${sizeMB.toFixed(2)}MB y excede el límite de 99MB.`
+        }, { quoted: msg });
+        continue;
+      }
+
+      await conn.sendMessage(chatId, {
+        video: fs.readFileSync(filePath),
+        mimetype: "video/mp4",
+        caption
+      }, { quoted: msg });
+
+      fs.unlinkSync(filePath);
+    }
+
+    await conn.sendMessage(chatId, {
+      react: { text: "✅", key: msg.key }
+    });
+
+  } catch (err) {
+    console.error("❌ Error en comando Instagram:", err);
+    await conn.sendMessage(chatId, {
+      text: "❌ *Ocurrió un error al procesar el enlace de Instagram.*"
+    }, { quoted: msg });
   }
 };
 
-handler.command = ['instagram', 'ig'];
-handler.tags = ['downloader'];
-handler.help = ['instagram', 'ig'];
-
+handler.command = ["instagram", "ig"];
 export default handler;
