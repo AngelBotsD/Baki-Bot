@@ -2,9 +2,7 @@ import fetch from 'node-fetch';
 import axios from 'axios';
 
 const apis = {
-  delirius: 'https://delirius-apiofc.vercel.app/',
-  ryzen: 'https://apidl.asepharyana.cloud/',
-  rioo: 'https://restapi.apibotwa.biz.id/'
+  delirius: 'https://delirius-apiofc.vercel.app/'
 };
 
 const handler = async (m, { conn, command, args, text, usedPrefix }) => {
@@ -12,8 +10,8 @@ const handler = async (m, { conn, command, args, text, usedPrefix }) => {
   if (!text) return m.reply(`_*[ ⚠️ ] Agrega lo que quieres Descargar en Spotify*_\n\n_Ejemplo:_\n.play Chica Paranormal.`);
 
   try {
-    // Usar primero ryzen
-    let { data } = await axios.get(`${apis.ryzen}api/search/spotify?query=${encodeURIComponent(text)}&limit=10`);
+    // Buscar con delirius
+    let { data } = await axios.get(`${apis.delirius}search/spotify?q=${encodeURIComponent(text)}&limit=10`);
 
     if (!data.data || data.data.length === 0) {
       throw `_*[ ⚠️ ] No se encontraron resultados para "${text}" en Spotify.*_`;
@@ -30,16 +28,16 @@ const handler = async (m, { conn, command, args, text, usedPrefix }) => {
 
     //＼／＼／＼／＼／＼／ DESCARGAR ＼／＼／＼／＼／＼／
     try {
-      const api1 = `${apis.ryzen}api/downloader/spotify?url=${encodeURIComponent(url)}`;
+      const api1 = `${apis.delirius}download/spotifydl?url=${encodeURIComponent(url)}`;
       const response1 = await fetch(api1);
       const result1 = await response1.json();
 
-      const downloadUrl1 = result1.link;
+      const downloadUrl1 = result1.data.url;
       await conn.sendMessage(m.chat, { audio: { url: downloadUrl1 }, fileName: 'audio.mp3', mimetype: 'audio/mpeg', caption: null, quoted: m });
 
     } catch (e1) {
       try {
-        const api2 = `${apis.delirius}download/spotifydl?url=${encodeURIComponent(url)}`;
+        const api2 = `${apis.delirius}download/spotifydlv3?url=${encodeURIComponent(url)}`;
         const response2 = await fetch(api2);
         const result2 = await response2.json();
 
@@ -47,17 +45,7 @@ const handler = async (m, { conn, command, args, text, usedPrefix }) => {
         await conn.sendMessage(m.chat, { audio: { url: downloadUrl2 }, fileName: 'audio.mp3', mimetype: 'audio/mpeg', caption: null, quoted: m });
 
       } catch (e2) {
-        try {
-          const api3 = `${apis.rioo}api/spotify?url=${encodeURIComponent(url)}`;
-          const response3 = await fetch(api3);
-          const result3 = await response3.json();
-
-          const downloadUrl3 = result3.data.response;
-          await conn.sendMessage(m.chat, { audio: { url: downloadUrl3 }, fileName: 'audio.mp3', mimetype: 'audio/mpeg', caption: null, quoted: m });
-
-        } catch (e3) {
-          m.reply(`❌ Ocurrió un error al descargar el audio\nError:${e3.message}`);
-        }
+        m.reply(`❌ Ocurrió un error al descargar el audio\nError:${e2.message}`);
       }
     }
 
