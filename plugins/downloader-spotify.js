@@ -49,26 +49,26 @@ const handler = async (msg, { conn, text }) => {
       });
     };
 
-    // 🔹 Ahora primero intenta con rioo
+    // 🔹 Ahora primero intenta con RYZEN
     try {
-      const r1 = await fetch(`${apis.rioo}api/spotify?url=${encodeURIComponent(url)}`);
+      const r1 = await fetch(`${apis.ryzen}api/downloader/spotify?url=${encodeURIComponent(url)}`);
       const j1 = await r1.json();
-      return await sendAudio(j1.data.response);
+      return await sendAudio(j1.link);
     } catch (e1) {
       try {
-        const r2 = await fetch(`${apis.delirius}download/spotifydl?url=${encodeURIComponent(url)}`);
+        const r2 = await fetch(`${apis.rioo}api/spotify?url=${encodeURIComponent(url)}`);
         const j2 = await r2.json();
-        return await sendAudio(j2.data.url);
+        return await sendAudio(j2.data.response);
       } catch (e2) {
         try {
-          const r3 = await fetch(`${apis.delirius}download/spotifydlv3?url=${encodeURIComponent(url)}`);
+          const r3 = await fetch(`${apis.delirius}download/spotifydl?url=${encodeURIComponent(url)}`);
           const j3 = await r3.json();
           return await sendAudio(j3.data.url);
         } catch (e3) {
           try {
-            const r4 = await fetch(`${apis.ryzen}api/downloader/spotify?url=${encodeURIComponent(url)}`);
+            const r4 = await fetch(`${apis.delirius}download/spotifydlv3?url=${encodeURIComponent(url)}`);
             const j4 = await r4.json();
-            return await sendAudio(j4.link);
+            return await sendAudio(j4.data.url);
           } catch (e4) {
             await conn.sendMessage(chatId, {
               text: `❌ *No se pudo descargar el audio.*\n🔹 _Error:_ ${e4.message}`
