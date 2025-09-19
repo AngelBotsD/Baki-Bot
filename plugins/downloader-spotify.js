@@ -1,93 +1,116 @@
-import fetch from "node-fetch";
-import axios from "axios";
+import axios from 'axios'
+import fetch from 'node-fetch'
 
-const apis = {
-  delirius: "https://delirius-apiofc.vercel.app/",
-  ryzen: "https://apidl.asepharyana.cloud/",
-  rioo: "https://restapi.apibotwa.biz.id/"
-};
+let handler = async (m, { conn, text, usedPrefix, command }) => {
 
-const handler = async (msg, { conn, text }) => {
-  const chatId = msg.key.remoteJid;
+    if (!text) return conn.reply(m.chat, `❀ Por favor, proporciona el nombre de una canción o artista.`, m)
 
-  await conn.sendMessage(chatId, {
-    react: { text: "🎶", key: msg.key }
-  });
-
-  if (!text) {
-    return conn.sendMessage(chatId, {
-      text: `⚠️ *Debes escribir el nombre de una canción.*\n📌 Ejemplo:\n✳️ \`.play3 Marshmello - Alone\``
-    }, { quoted: msg });
-  }
-
-  try {
-    const res = await axios.get(`${apis.delirius}search/spotify?q=${encodeURIComponent(text)}&limit=1`);
-    const result = res.data.data?.[0];
-    if (!result) throw "❌ No se encontraron resultados en Spotify.";
-
-    const { title, artist, duration, publish, popularity, url, image } = result;
-
-    const info = `🎵 *Resultado encontrado:*\n\n` +
-                 `📌 *Título:* ${title}\n` +
-                 `🎤 *Artista:* ${artist}\n` +
-                 `⏱️ *Duración:* ${duration}\n` +
-                 `📅 *Publicado:* ${publish}\n` +
-                 `🔥 *Popularidad:* ${popularity}\n` +
-                 `🔗 *Enlace:* ${url}\n\n` +
-                 `✨ *La Suki Bot está enviando tu música...*`;
-
-    await conn.sendMessage(chatId, {
-      image: { url: image },
-      caption: info
-    }, { quoted: msg });
-
-    const sendAudio = async (link) => {
-      await conn.sendMessage(chatId, {
-        audio: { url: link },
-        fileName: `${title}.mp3`,
-        mimetype: "audio/mpeg"
-      }, { quoted: msg });
-    };
-
-    // Intento 1
     try {
-      const r1 = await fetch(`${apis.delirius}download/spotifydl?url=${encodeURIComponent(url)}`);
-      const j1 = await r1.json();
-      return await sendAudio(j1.data.url);
+        let songInfo = await spotifyxv(text)
+        if (!songInfo.length) throw `✧ No se encontró la canción.`
+        let song = songInfo[0]
+        const res = await fetch(`https://api.sylphy.xyz/download/spotify?url=${song.url}&apikey=sylph-96ccb836bc`)
+
+        if (!res.ok) throw `Error al obtener datos de la API, código de estado: ${res.status}`
+
+        const data = await res.json().catch((e) => { 
+            console.error('Error parsing JSON:', e)
+            throw "Error al analizar la respuesta JSON."
+        })
+
+        if (!data.data.dl_url) throw "No se pudo obtener el enlace de descarga."
+        const info = `「✦」Descargando *<${data.data.title}>*\n\n> ✧ Artista » *${data.data.artist}*\n> ✰ Album » *${data.data.album}*\n> ⴵ Duracion » *${data.data.duration}*\n> 🜸 Link » ${song.url}`
+
+        await conn.sendMessage(m.chat, { text: info, contextInfo: { forwardingScore: 9999999, isForwarded: false, 
+        externalAdReply: {
+            showAdAttribution: true,
+            containsAutoReply: true,
+            renderLargerThumbnail: true,
+            title: botname,
+            body: dev,
+            mediaType: 1,
+            thumbnailUrl: data.data.img,
+            mediaUrl: song.url,
+            sourceUrl: song.url
+        }}}, { quoted: m })
+
+        conn.sendMessage(m.chat, { audio: { url: data.data.dl_url }, fileName: `${data.data.title}.mp3`, mimetype: 'audio/mp4', ptt: true }, { quoted: m })
+
     } catch (e1) {
-      // Intento 2
-      try {
-        const r2 = await fetch(`${apis.delirius}download/spotifydlv3?url=${encodeURIComponent(url)}`);
-        const j2 = await r2.json();
-        return await sendAudio(j2.data.url);
-      } catch (e2) {
-        // Intento 3
-        try {
-          const r3 = await fetch(`${apis.rioo}api/spotify?url=${encodeURIComponent(url)}`);
-          const j3 = await r3.json();
-          return await sendAudio(j3.data.response);
-        } catch (e3) {
-          // Intento 4
-          try {
-            const r4 = await fetch(`${apis.ryzen}api/downloader/spotify?url=${encodeURIComponent(url)}`);
-            const j4 = await r4.json();
-            return await sendAudio(j4.link);
-          } catch (e4) {
-            await conn.sendMessage(chatId, {
-              text: `❌ *No se pudo descargar el audio.*\n🔹 _Error:_ ${e4.message}`
-            }, { quoted: msg });
-          }
-        }
-      }
+        m.reply(`${e1.message || e1}`)
     }
+}
+handler.help = ['spotify', 'music']
+handler.tags = ['downloader']
+handler.command = ['spotify', 'splay']
+handler.group = true
 
-  } catch (err) {
-    console.error("❌ Error en el comando .play3:", err);
-    await conn.sendMessage(chatId, {
-      text: `❌ *Ocurrió un error:* ${err.message || err}`
-    }, { quoted: msg });
-  }
-};
+export default handler
 
-handler.command = ["play3"];
-export default handler;
+async function spotifyxv(query) {
+    let token = await tokens()
+    let response = await axios({
+        method: 'get',
+        url: 'https://api.spotify.com/v1/search?q=' + query + '&type=track',
+        headers: {
+            Authorization: 'Bearer ' + token
+        }
+    })
+    const tracks = response.data.tracks.items
+    const results = tracks.map((track) => ({
+        name: track.name,
+        artista: track.artists.map((artist) => artist.name),
+        album: track.album.name,
+        duracion: timestamp(track.duration_ms),
+        url: track.external_urls.spotify,
+        imagen: track.album.images.length ? track.album.images[0].url : ''
+    }))
+    return results
+}
+
+async function tokens() {
+    const response = await axios({
+        method: 'post',
+        url: 'https://accounts.spotify.com/api/token',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Authorization: 'Basic ' + Buffer.from('acc6302297e040aeb6e4ac1fbdfd62c3:0e8439a1280a43aba9a5bc0a16f3f009').toString('base64')
+        },
+        data: 'grant_type=client_credentials'
+    })
+    return response.data.access_token
+}
+
+function timestamp(time) {
+    const minutes = Math.floor(time / 60000)
+    const seconds = Math.floor((time % 60000) / 1000)
+    return minutes + ':' + (seconds < 10 ? '0' : '') + seconds
+}
+
+async function getBuffer(url, options) {
+    try {
+        options = options || {}
+        const res = await axios({
+            method: 'get',
+            url,
+            headers: {
+                DNT: 1,
+                'Upgrade-Insecure-Request': 1
+            },
+            ...options,
+            responseType: 'arraybuffer'
+        })
+        return res.data
+    } catch (err) {
+        return err
+    }
+}
+
+async function getTinyURL(text) {
+    try {
+        let response = await axios.get(`https://tinyurl.com/api-create.php?url=${text}`)
+        return response.data
+    } catch (error) {
+        return text
+    }
+}
