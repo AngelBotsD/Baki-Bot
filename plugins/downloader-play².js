@@ -24,14 +24,17 @@ const APIS = [
 
 const getAudioUrl = async (videoUrl) => {
   let lastError = null;
+
   for (const api of APIS) {
     try {
       console.log(`Probando API: ${api.name}`);
       let audioUrl;
+
       const res = await fetch(api.url(videoUrl), { timeout: 10000 });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       audioUrl = await api.extract(data);
+
       if (audioUrl) {
         console.log(`Éxito con API: ${api.name}`);
         return audioUrl;
@@ -42,20 +45,23 @@ const getAudioUrl = async (videoUrl) => {
       continue;
     }
   }
+
   throw lastError || new Error("Todas las APIs fallaron");
 };
 
+// ✅ FIX: conversión a PTT compatible con WhatsApp
 const convertToPtt = (input, output) => {
   return new Promise((resolve, reject) => {
     const ffmpeg = spawn("ffmpeg", [
       "-y",
       "-i", input,
-      "-ar", "48000",
-      "-ac", "1",
-      "-c:a", "libopus",
-      "-b:a", "128k",
+      "-ar", "48000",      // Frecuencia correcta
+      "-ac", "1",          // Mono
+      "-c:a", "libopus",   // Codec WhatsApp
+      "-b:a", "128k",      // Calidad aceptable
       output
     ]);
+
     ffmpeg.on("close", (code) => {
       if (code === 0) resolve(output);
       else reject(new Error("Error al convertir a PTT"));
@@ -94,7 +100,7 @@ let handler = async (m, { conn }) => {
     const audioUrl = await getAudioUrl(video.url);
 
     const tmpMp3 = path.join(process.cwd(), `${Date.now()}.mp3`);
-    const tmpOpus = path.join(process.cwd(), `${Date.now()}.opus`);
+    const tmpOgg = path.join(process.cwd(), `${Date.now()}.ogg`);
 
     const res = await fetch(audioUrl);
     const fileStream = fs.createWriteStream(tmpMp3);
@@ -104,16 +110,18 @@ let handler = async (m, { conn }) => {
       fileStream.on("finish", resolve);
     });
 
-    await convertToPtt(tmpMp3, tmpOpus);
+    await convertToPtt(tmpMp3, tmpOgg);
 
+    // ✅ Mandando el audio como nota de voz (PTT)
     await conn.sendMessage(m.chat, {
-      audio: fs.readFileSync(tmpOpus),
+      audio: fs.readFileSync(tmpOgg),
       mimetype: "audio/ogg; codecs=opus",
-      ptt: true
+      ptt: true,
+      caption: "🎤 Mandando el audio como PTT"
     }, { quoted: m });
 
     fs.unlinkSync(tmpMp3);
-    fs.unlinkSync(tmpOpus);
+    fs.unlinkSync(tmpOgg);
 
     await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
 
