@@ -7,7 +7,7 @@ const apis = {
 
 const handler = async (m, { conn, command, args, text, usedPrefix }) => {
 
-  if (!text) return m.reply(`_*[ ⚠️ ] Agrega lo que quieres Descargar en Spotify*_\n\n_Ejemplo:_\n.play Chica Paranormal.`);
+  if (!text) return m.reply(`*💽 𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝚎𝚕 𝙽𝚘𝚖𝚋𝚛𝚎 𝚍𝚎 𝙰𝚕𝚐𝚞𝚗𝚊 𝙲𝚊𝚗𝚌𝚒𝚘𝚗 𝙴𝚗 𝚂𝚙𝚘𝚝𝚒𝚏𝚢*`);
 
   try {
     await conn.sendMessage(m.chat, { react: { text: '🕒', key: m.key }});
