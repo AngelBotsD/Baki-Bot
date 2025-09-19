@@ -43,8 +43,6 @@ const handler = async (msg, { conn, text }) => {
 
   const caption = `
 
-❦𝑳𝑨 𝑺𝑼𝑲𝑰 𝑩𝑶𝑻❦
-
 📀𝙸𝚗𝚏𝚘 𝚍𝚎𝚕 𝚟𝚒𝚍𝚎𝚘:
 
 ❥𝑻𝒊𝒕𝒖𝒍𝒐: ${title}
@@ -56,10 +54,6 @@ const handler = async (msg, { conn, text }) => {
 📥 𝙾𝚙𝚌𝚒𝚘𝚗𝚎𝚜 𝚍𝚎 𝙳𝚎𝚜𝚌𝚊𝚛𝚐𝚊 𝚛𝚎𝚊𝚌𝚒𝚘𝚗𝚎 𝚘 𝚛𝚎𝚜𝚙𝚘𝚗𝚍𝚊 𝚎𝚕 𝚖𝚎𝚗𝚜𝚊𝚓𝚎 𝚍𝚎𝚕 𝚋𝚘𝚝🎮:
 ☛ 👍 Audio MP3     (1 / audio)
 ☛ ❤️ Video MP4     (2 / video)
-☛ 📄 Audio Doc     (4 / audiodoc)
-☛ 📁 Video Doc     (3 / videodoc)
- 
-❦𝑳𝑨 𝑺𝑼𝑲𝑰 𝑩𝑶𝑻❦
 `.trim();
 
   // envía preview
