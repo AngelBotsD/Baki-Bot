@@ -43,7 +43,7 @@ const handler = async (msg, { conn, text }) => {
 
   const caption = `
 
-❦BAKI 𝑩𝑶𝑻❦
+❦𝑳𝑨 𝑺𝑼𝑲𝑰 𝑩𝑶𝑻❦
 
 📀𝙸𝚗𝚏𝚘 𝚍𝚎𝚕 𝚟𝚒𝚍𝚎𝚘:
 
@@ -59,7 +59,7 @@ const handler = async (msg, { conn, text }) => {
 ☛ 📄 Audio Doc     (4 / audiodoc)
 ☛ 📁 Video Doc     (3 / videodoc)
  
-❦BAKI 𝑩𝑶𝑻❦
+❦𝑳𝑨 𝑺𝑼𝑲𝑰 𝑩𝑶𝑻❦
 `.trim();
 
   // envía preview
@@ -201,7 +201,7 @@ async function downloadVideo(conn, job, asDocument, quoted) {
     [asDocument ? "document" : "video"]: fs.readFileSync(file),
     mimetype: "video/mp4",
     fileName: `${title}.mp4`,
-    caption: asDocument ? undefined : `🎬 𝐀𝐪𝐮𝐢́ 𝐭𝐢𝐞𝐧𝐞𝐬 𝐭𝐮 𝐯𝐢𝐝𝐞𝐨~ 💫\n© Baki bot`
+    caption: asDocument ? undefined : `🎬 𝐀𝐪𝐮𝐢́ 𝐭𝐢𝐞𝐧𝐞𝐬 𝐭𝐮 𝐯𝐢𝐝𝐞𝐨~ 💫\n© 𝐋𝐚 𝐒𝐮𝐤𝐢 𝐁𝐨𝐭`
   }, { quoted });
   fs.unlinkSync(file);
 }
