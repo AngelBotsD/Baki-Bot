@@ -9,13 +9,13 @@ const handler = async (msg, { conn, args, command }) => {
 
   if (!text) {
     return conn.sendMessage(chatId, {
-      text: `✳️ *Usa:*\n${pref}${command} <enlace>`
+      text: `*𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝚞𝚗 𝙴𝚗𝚕𝚊𝚌𝚎 𝚍𝚎 𝚃𝚒𝚔𝚃𝚘𝚔*`
     }, { quoted: msg });
   }
 
   if (!/^https?:\/\//.test(args[0]) || !args[0].includes("tiktok")) {
     return conn.sendMessage(chatId, {
-      text: "❌ *Enlace de TikTok inválido.*"
+      text: "🚩 *𝙴𝚗𝚕𝚊𝚌𝚎 𝙸𝚗𝚟𝚊𝚕𝚒𝚍𝚘*"
     }, { quoted: msg });
   }
 
