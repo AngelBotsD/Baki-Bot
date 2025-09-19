@@ -1,80 +1,90 @@
-import Scraper from '@SumiFX/Scraper'
-import axios from 'axios'
-import fetch from 'node-fetch'
+import axios from "axios";
+import fs from "fs";
+import path from "path";
 
-let handler = async (m, { conn, args, usedPrefix, command }) => {
-    if (!args[0])  m.reply(`🍭 Ingresa un enlace del vídeo de TikTok junto al comando.\n\nEjemplo:\n${usedPrefix + command} https://vm.tiktok.com/ZMMCYHnxf/`)
+const handler = async (msg, { conn, args, command }) => {
+  const chatId = msg.key.remoteJid;
+  const text = args.join(" ");
+  const pref = global.prefixes?.[0] || ".";
 
-    try {
-        let { title, published, quality, likes, commentCount, shareCount, views, dl_url } = await Scraper.tiktokdl(args[0])
-            let txt = `╭─⬣「 *TikTok Download* 」⬣\n`
-                txt += `│  ≡◦ *🍭 Título* : ${title}\n`
-                txt += `│  ≡◦ *📅 Publicado* : ${published}\n`
-                txt += `│  ≡◦ *🪴 Calidad* : ${quality}\n`
-                txt += `│  ≡◦ *👍 Likes* : ${likes}\n`
-                txt += `│  ≡◦ *🗣 Comentarios* : ${commentCount}\n`
-                txt += `│  ≡◦ *💫 Share* : ${shareCount}\n`
-                txt += `│  ≡◦ *📹 Visitas* : ${views}\n`
-                txt += `╰─⬣`
+  if (!text) {
+    return conn.sendMessage(chatId, {
+      text: `✳️ *Usa:*\n${pref}${command} <enlace>`
+    }, { quoted: msg });
+  }
 
-        await conn.sendMessage(m.chat, { video: { url: dl_url }, caption: txt }, { quoted: m })
-    } catch {
-    try {
-        const api = await fetch(`https://api-starlights-team.koyeb.app/api/tiktok?url=${args[0]}`)
-        const data = await api.json()
+  if (!/^https?:\/\//.test(args[0]) || !args[0].includes("tiktok")) {
+    return conn.sendMessage(chatId, {
+      text: "❌ *Enlace de TikTok inválido.*"
+    }, { quoted: msg });
+  }
 
-        if (data.status) {
-            const { author, view, comment, play, share, download, duration, title, video } = data.data;
-            let txt = `╭─⬣「 *TikTok Download* 」⬣\n`
-                txt += `│  ≡◦ *🍭 Título* : ${title}\n`
-                txt += `│  ≡◦ *📚 Autor* : ${author.nickname}\n`
-                txt += `│  ≡◦ *🕜 Duración* : ${duration} Segundos\n`
-                txt += `│  ≡◦ *🌵 Descargas* : ${download}\n`
-                txt += `│  ≡◦ *🗣 Comentarios* : ${comment}\n`
-                txt += `│  ≡◦ *💫 Share* : ${share}\n`
-                txt += `│  ≡◦ *🐢 Visitas* : ${play}\n`
-                txt += `╰─⬣`
+  try {
+    await conn.sendMessage(chatId, {
+      react: { text: "🕒", key: msg.key }
+    });
 
-            await conn.sendMessage(m.chat, { video: { url: video }, caption: txt }, { quoted: m })
-        }
-    } catch {
-    try {
-        const api1 = await fetch(`https://delirius-api-oficial.vercel.app/api/tiktok?url=${args[0]}`)
-        const data1 = await api1.json()
+    const response = await axios.get(`https://api.dorratz.com/v2/tiktok-dl?url=${args[0]}`);
+    const data = response.data?.data;
 
-        if (data1.status) {
-            const { author, repro, like, share, comment, download, duration, title, meta, published } = data1.data
-            const publishedDate = formatDate(published)
-            const fileSize = convertBytesToMB(meta.media[0].size_org)
+    if (!data || !data.media?.org) {
+      throw new Error("La API no devolvió un video válido.");
+    }
 
-            let txt = `╭─⬣「 *TikTok Download* 」⬣\n`
-                txt += `│  ≡◦ *🍭 Título* : ${title}\n`
-                txt += `│  ≡◦ *🐢 Autor* : ${author.nickname}\n`
-                txt += `│  ≡◦ *🕜 Duración* : ${duration} Segundos\n`
-                txt += `│  ≡◦ *📹 Reproducciones* : ${repro}\n`
-                txt += `│  ≡◦ *👍 Likes* : ${like}\n`;
-                txt += `│  ≡◦ *🗣 Comentarios* : ${comment}\n`
-                txt += `│  ≡◦ *📦 Descargas* : ${download}\n`
-                txt += `│  ≡◦ *💫 Share* : ${share}\n`
-                txt += `│  ≡◦ *📅 Publicado* : ${publishedDate}\n`
-                txt += `│  ≡◦ *🌵 Tamaño* : ${fileSize}\n`
-                txt += `╰─⬣`
+    const videoUrl = data.media.org;
+    const videoTitle = data.title || "Sin título";
+    const videoAuthor = data.author?.nickname || "Desconocido";
+    const videoDuration = data.duration ? `${data.duration} segundos` : "No especificado";
+    const videoLikes = data.like || "0";
+    const videoComments = data.comment || "0";
 
-            await conn.sendMessage(m.chat, { video: { url: meta.media[0].org }, caption: txt }, { quoted: m })
-        }
-    } catch {
-}}}}
-handler.help = ['tiktok <url tt>']
-handler.tags = ['downloader']
-handler.command = ['tiktok', 'ttdl', 'tiktokdl', 'tiktoknowm']
+    const tmpDir = path.resolve("./tmp");
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
 
-export default handler
+    const filePath = path.join(tmpDir, `tt-${Date.now()}.mp4`);
+    const videoRes = await axios.get(videoUrl, { responseType: "stream" });
+    const writer = fs.createWriteStream(filePath);
 
-function convertBytesToMB(bytes) {
-    return (bytes / (1024 * 1024)).toFixed(2) + ' MB'
-}
+    await new Promise((resolve, reject) => {
+      videoRes.data.pipe(writer);
+      writer.on("finish", resolve);
+      writer.on("error", reject);
+    });
 
-function formatDate(unixTimestamp) {
-    const date = new Date(unixTimestamp * 1000)
-    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`
-}
+    const stats = fs.statSync(filePath);
+    const sizeMB = stats.size / (1024 * 1024);
+    if (sizeMB > 99) {
+      fs.unlinkSync(filePath);
+      return conn.sendMessage(chatId, {
+        text: `❌ El archivo pesa ${sizeMB.toFixed(2)}MB y excede el límite de 99MB.`
+      }, { quoted: msg });
+    }
+
+    const caption = ``;
+
+    await conn.sendMessage(chatId, {
+      video: fs.readFileSync(filePath),
+      mimetype: "video/mp4",
+      caption
+    }, { quoted: msg });
+
+    fs.unlinkSync(filePath);
+
+    await conn.sendMessage(chatId, {
+      react: { text: "✅", key: msg.key }
+    });
+
+  } catch (error) {
+    console.error("❌ Error en el comando TikTok:", error);
+    await conn.sendMessage(chatId, {
+      text: "❌ *Ocurrió un error al procesar el enlace de TikTok.*"
+    }, { quoted: msg });
+
+    await conn.sendMessage(chatId, {
+      react: { text: "❌", key: msg.key }
+    });
+  }
+};
+
+handler.command = ["tiktok", "tt"];
+export default handler;
