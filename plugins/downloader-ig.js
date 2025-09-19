@@ -1,4 +1,4 @@
-import { igdl } from "ruhend-scraper"
+import { instagramdl } from '@bochilteam/scraper'
 
 let handler = async (m, { args, conn }) => { 
   if (!args[0]) {
