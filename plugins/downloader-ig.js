@@ -15,7 +15,7 @@ const handler = async (msg, { conn, args, command }) => {
 
   try {
     await conn.sendMessage(chatId, {
-      react: { text: "⏳", key: msg.key }
+      react: { text: "🕒", key: msg.key }
     });
 
     const apiUrl = `https://api.dorratz.com/igdl?url=${encodeURIComponent(text)}`;
@@ -28,7 +28,7 @@ const handler = async (msg, { conn, args, command }) => {
       }, { quoted: msg });
     }
 
-    const caption = `🎬 *𝑪𝒐𝒏𝒕𝒆𝒏𝒊𝒅𝒐 IG 𝒅𝒆𝒔𝒄𝒂𝒓𝒈𝒂𝒅𝒐*\n𖠁 *API:* api.dorratz.com\n────────────\n🤖 _La Suki Bot_`;
+    const caption = ``;
 
     const tmpDir = path.resolve("./tmp");
     if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
