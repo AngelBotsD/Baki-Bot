@@ -1,20 +1,103 @@
-import axios from 'axios'
+import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
+import { pipeline } from 'stream';
+import { promisify } from 'util';
+import { fileURLToPath } from 'url';
 
-let handler = async (m, { conn, text, usedPrefix, command }) => {
-try {
-if (!text) throw m.reply(`🍭 Ingresa el enlace del *Vídeo* o *Imagen* de Pinterest que deseas descargar.`)
-let res = await axios.get(`https://api-starlights-team.koyeb.app/api/pindl?url=${text}`)
-let { type, url: sms } = res.data
-if (type === 'image') {
- await conn.sendMessage(m.chat, { image: { url: sms }, quoted: m })
-} else if (type === 'video') {
-await conn.sendMessage(m.chat, { video: { url: sms }, quoted: m })
-} else {
-throw m.reply(`Error`)
-}} catch (error) {
-}}
-handler.tags = ['downloader']
-handler.help = ['pindl <pin url>']
-handler.command = /^(pindl)$/i 
-handler.limit = 1
-export default handler
+const streamPipeline = promisify(pipeline);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const handler = async (msg, { conn, text, usedPrefix, command }) => {
+  const chatId = msg.key.remoteJid;
+  const pref = global.prefixes?.[0] || usedPrefix || '.';
+
+  if (!text || (!text.includes('youtube.com') && !text.includes('youtu.be'))) {
+    return conn.sendMessage(chatId, {
+      text: `✳️ *Usa:*\n${pref}${command} <enlace de YouTube>\n📌 Ej: *${pref}${command}* https://youtube.com/watch?v=abc123`
+    }, { quoted: msg });
+  }
+
+  await conn.sendMessage(chatId, {
+    react: { text: '⏳', key: msg.key }
+  });
+
+  try {
+    const qualities = ['720p', '480p', '360p'];
+    let videoData = null;
+
+    for (let quality of qualities) {
+      try {
+        const apiUrl = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(text)}&type=video&quality=${quality}&apikey=russellxz`;
+        const response = await axios.get(apiUrl);
+        if (response.data?.status && response.data?.data?.url) {
+          videoData = {
+            url: response.data.data.url,
+            title: response.data.title || 'video',
+            thumbnail: response.data.thumbnail,
+            duration: response.data.fduration,
+            views: response.data.views,
+            channel: response.data.channel,
+            quality: response.data.data.quality || quality,
+            size: response.data.data.size || 'Desconocido',
+            publish: response.data.publish || 'Desconocido',
+            id: response.data.id || ''
+          };
+          break;
+        }
+      } catch { continue; }
+    }
+
+    if (!videoData) throw new Error('❌ No se pudo obtener el video en ninguna calidad. Talvez excede el límite de 99MB.');
+
+    const tmpDir = path.join(__dirname, 'tmp');
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+
+    const filePath = path.join(tmpDir, `${Date.now()}_video.mp4`);
+
+    const response = await axios.get(videoData.url, {
+      responseType: 'stream',
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    await streamPipeline(response.data, fs.createWriteStream(filePath));
+
+    const stats = fs.statSync(filePath);
+    if (!stats || stats.size < 100000) {
+      fs.unlinkSync(filePath);
+      throw new Error('❌ El video descargado está vacío o incompleto.');
+    }
+
+    const caption = ``;
+
+    await conn.sendMessage(chatId, {
+      video: fs.readFileSync(filePath),
+      mimetype: 'video/mp4',
+      fileName: `${videoData.title}.mp4`,
+      caption,
+      gifPlayback: false
+    }, { quoted: msg });
+
+    fs.unlinkSync(filePath);
+
+    await conn.sendMessage(chatId, {
+      react: { text: '✅', key: msg.key }
+    });
+
+  } catch (err) {
+    console.error("❌ Error en .ytmp4:", err.message);
+    await conn.sendMessage(chatId, {
+      text: `❌ *Error al procesar el video:*\n_${err.message}_`
+    }, { quoted: msg });
+
+    await conn.sendMessage(chatId, {
+      react: { text: '❌', key: msg.key }
+    });
+  }
+};
+
+handler.command = ['ytmp4'];
+handler.help = ['ytmp4 <enlace>'];
+handler.tags = ['descargas'];
+
+export default handler;
