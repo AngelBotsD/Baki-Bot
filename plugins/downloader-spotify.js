@@ -1,175 +1,95 @@
+import fetch from 'node-fetch';
 import axios from 'axios';
-import cheerio from 'cheerio';
-import qs from 'qs';
 
-let handler = async (m, { conn, text, usedPrefix, command }) => {
-  if (!text) {
-    return m.reply(`✦ ¡Hey! Parece que olvidaste ingresar un enlace de YouTube.\n💫 Ejemplo:\n\n> .spotify feid inocente `);
-  }
-
-  const appleMusic = {
-    search: async (query) => {
-      const url = `https://music.apple.com/us/search?term=${query}`;
-      try {
-        const { data } = await axios.get(url);
-        const $ = cheerio.load(data);
-        const results = [];
-        $('.desktop-search-page .section[data-testid="section-container"] .grid-item').each((index, element) => {
-          const title = $(element).find('.top-search-lockup__primary__title').text().trim();
-          const subtitle = $(element).find('.top-search-lockup__secondary').text().trim();
-          const link = $(element).find('.click-action').attr('href');
-          results.push({ title, subtitle, link });
-        });
-        return results;
-      } catch (error) {
-        console.error("Error en búsqueda de Apple Music:", error.message);
-        return { success: false, message: error.message };
-      }
-    },
-    detail: async (url) => {
-      try {
-        const { data } = await axios.get(url);
-        const $ = cheerio.load(data);
-        const albumTitle = $('h1[data-testid="non-editable-product-title"]').text().trim();
-        const artistName = $('a[data-testid="click-action"]').first().text().trim();
-        const releaseInfo = $('div.headings__metadata-bottom').text().trim();
-        const description = $('div[data-testid="description"]').text().trim();
-        return { albumTitle, artistName, releaseInfo, description };
-      } catch (error) {
-        console.error("Error en detalles de Apple Music:", error.message);
-        return { success: false, message: error.message };
-      }
-    }
-  };
-
-  const appledown = {
-    getData: async (urls) => {
-      const url = `https://aaplmusicdownloader.com/api/applesearch.php?url=${urls}`;
-      try {
-        const response = await axios.get(url, {
-          headers: {
-            'Accept': 'application/json, text/javascript, */*; q=0.01',
-            'X-Requested-With': 'XMLHttpRequest',
-            'User-Agent': 'MyApp/1.0',
-            'Referer': 'https://aaplmusicdownloader.com/'
-          }
-        });
-        return response.data;
-      } catch (error) {
-        console.error("Error obteniendo datos de Apple Music Downloader:", error.message);
-        return { success: false, message: error.message };
-      }
-    },
-    getAudio: async (trackName, artist, urlMusic, token) => {
-      const url = 'https://aaplmusicdownloader.com/api/composer/swd.php';
-      const data = {
-        song_name: trackName,
-        artist_name: artist,
-        url: urlMusic,
-        token: token
-      };
-      const headers = {
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'Accept': 'application/json, text/javascript, */*; q=0.01',
-        'X-Requested-With': 'XMLHttpRequest',
-        'User-Agent': 'MyApp/1.0',
-        'Referer': 'https://aaplmusicdownloader.com/song.php#'
-      };
-      try {
-        const response = await axios.post(url, qs.stringify(data), { headers });
-        return response.data.dlink;
-      } catch (error) {
-        console.error("Error obteniendo audio de Apple Music:", error.message);
-        return { success: false, message: error.message };
-      }
-    },
-    download: async (urls) => {
-      const musicData = await appledown.getData(urls);
-      if (!musicData || !musicData.name) {
-        return { success: false, message: "No se encontraron datos de música." };
-      }
-
-      const encodedData = encodeURIComponent(JSON.stringify([
-        musicData.name,
-        musicData.albumname,
-        musicData.artist,
-        musicData.thumb,
-        musicData.duration,
-        musicData.url
-      ]));
-      const url = 'https://aaplmusicdownloader.com/song.php';
-      const headers = {
-        'authority': 'aaplmusicdownloader.com',
-        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-        'content-type': 'application/x-www-form-urlencoded',
-        'origin': 'https://aaplmusicdownloader.com',
-        'referer': 'https://aaplmusicdownloader.com/',
-        'user-agent': 'MyApp/1.0'
-      };
-
-      try {
-        const response = await axios.post(url, `data=${encodedData}`, { headers });
-        const $ = cheerio.load(response.data);
-        const trackName = $('td:contains("Track Name:")').next().text();
-        const albumName = $('td:contains("Album:")').next().text();
-        const artist = $('td:contains("Artist:")').next().text();
-        const thumb = $('figure.image img').attr('src');
-        const urlMusic = urls;
-        const token = $('a#download_btn').attr('token');
-        const downloadLink = await appledown.getAudio(trackName, artist, urlMusic, token);
-
-        return {
-          success: true,
-          name: trackName,
-          albumname: albumName,
-          artist: artist,
-          thumb: thumb,
-          duration: $('td:contains("Duration:")').next().text(),
-          download: downloadLink
-        };
-      } catch (error) {
-        console.error("Error descargando música de Apple Music:", error.message);
-        return { success: false, message: error.message };
-      }
-    }
-  };
-
-  conn.sendMessage(m.chat, { react: { text: "🕒", key: m.key } });
-
-  const searchResults = await appleMusic.search(text);
-  if (!searchResults.length) {
-    return m.reply("No se encontraron resultados para tu búsqueda.");
-  }
-
-  const musicData = await appledown.download(searchResults[0].link);
-  if (!musicData.success) {
-    return m.reply(`Error: ${musicData.message}`);
-  }
-
-  const { name, albumname, artist, url, thumb, duration, download } = musicData;
-
-  const doc = {
-    audio: { url: download },
-    mimetype: 'audio/mp4',
-    fileName: `${name}.mp3`,
-    contextInfo: {
-      externalAdReply: {
-        showAdAttribution: true,
-        mediaType: 2,
-        mediaUrl: url,
-        title: name,
-        sourceUrl: url,
-        thumbnail: await (await conn.getFile(thumb)).data
-      }
-    }
-  };
-
-  await conn.sendMessage(m.chat, doc, { quoted: m });
-  await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
+const apis = {
+  delirius: 'https://delirius-apiofc.vercel.app/',
+  siputzx: 'https://api.siputzx.my.id/api/',
+  ryzen: 'https://apidl.asepharyana.cloud/',
+  rioo: 'https://restapi.apibotwa.biz.id/',
+  random1: 'https://api.agungny.my.id/api/'
 };
 
-handler.help = ['spotify'];
-handler.tags = ['downloader'];
-handler.command = 'spotify',/^(applemusicplay|spotify|song)$/i;
+const handler = async (m, { conn, command, args, text, usedPrefix }) => {
 
+  if (!text) return m.reply(`_*[ ⚠️ ] Agrega lo que quieres Descargar en Spotify*_\n\n_Ejemplo:_\n.play Chica Paranormal.`);
+
+  try {
+    // Usar primero random1
+    let { data } = await axios.get(`${apis.random1}spotify/search?query=${encodeURIComponent(text)}&limit=10`);
+
+    if (!data.data || data.data.length === 0) {
+      throw `_*[ ⚠️ ] No se encontraron resultados para "${text}" en Spotify.*_`;
+    }
+
+    const song = data.data[0];
+    const img = song.image;
+    const url = song.url;
+
+    // Mensaje bonito
+    const info = `> *𝚂𝙿𝙾𝚃𝙸𝙵𝚈 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*\n\n🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${song.title}\n🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${song.artist}\n🕒 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${song.duration}\n\n_*🎶 Enviando música...*_`;
+
+    await conn.sendFile(m.chat, img, 'imagen.jpg', info, m);
+
+    //＼／＼／＼／＼／＼／ DESCARGAR ＼／＼／＼／＼／＼／
+    try {
+      const api1 = `${apis.random1}spotify/download?url=${encodeURIComponent(url)}`;
+      const response1 = await fetch(api1);
+      const result1 = await response1.json();
+
+      const downloadUrl1 = result1.data.url;
+      await conn.sendMessage(m.chat, { audio: { url: downloadUrl1 }, fileName: 'audio.mp3', mimetype: 'audio/mpeg', caption: null, quoted: m });
+
+    } catch (e1) {
+      try {
+        const api2 = `${apis.delirius}download/spotifydl?url=${encodeURIComponent(url)}`;
+        const response2 = await fetch(api2);
+        const result2 = await response2.json();
+
+        const downloadUrl2 = result2.data.url;
+        await conn.sendMessage(m.chat, { audio: { url: downloadUrl2 }, fileName: 'audio.mp3', mimetype: 'audio/mpeg', caption: null, quoted: m });
+
+      } catch (e2) {
+        try {
+          const api3 = `${apis.delirius}download/spotifydlv3?url=${encodeURIComponent(url)}`;
+          const response3 = await fetch(api3);
+          const result3 = await response3.json();
+
+          const downloadUrl3 = result3.data.url;
+          await conn.sendMessage(m.chat, { audio: { url: downloadUrl3 }, fileName: 'audio.mp3', mimetype: 'audio/mpeg', caption: null, quoted: m });
+
+        } catch (e3) {
+          try {
+            const api4 = `${apis.rioo}api/spotify?url=${encodeURIComponent(url)}`;
+            const response4 = await fetch(api4);
+            const result4 = await response4.json();
+
+            const downloadUrl4 = result4.data.response;
+            await conn.sendMessage(m.chat, { audio: { url: downloadUrl4 }, fileName: 'audio.mp3', mimetype: 'audio/mpeg', caption: null, quoted: m });
+
+          } catch (e4) {
+            try {
+              const api5 = `${apis.ryzen}api/downloader/spotify?url=${encodeURIComponent(url)}`;
+              const response5 = await fetch(api5);
+              const result5 = await response5.json();
+
+              const downloadUrl5 = result5.link;
+              await conn.sendMessage(m.chat, { audio: { url: downloadUrl5 }, fileName: 'audio.mp3', mimetype: 'audio/mpeg', caption: null, quoted: m });
+
+            } catch (e5) {
+              m.reply(`❌ Ocurrió un error al descargar el audio\nError:${e5.message}`);
+            }
+          }
+        }
+      }
+    }
+
+  } catch (e) {
+    await conn.reply(m.chat, `> Intenta Nuevamente.`, m);
+    console.log(e);
+  }
+};
+
+handler.tags = ['downloader']; 
+handler.help = ['spotify'];
+handler.command = ['spotify'];
 export default handler;
