@@ -9,16 +9,6 @@ const APIS = [
     name: "neoxr",
     url: (videoUrl) => `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`,
     extract: (data) => data?.data?.url
-  },
-  {
-    name: "zenkey",
-    url: (videoUrl) => `https://api.zenkey.my.id/api/download/ytmp3?apikey=zenkey&url=${encodeURIComponent(videoUrl)}&quality=64`,
-    extract: (data) => data?.result?.download?.url
-  },
-  {
-    name: "vreden",
-    url: (videoUrl) => `https://api.vreden.my.id/api/ytmp3?url=${encodeURIComponent(videoUrl)}&quality=64`,
-    extract: (data) => data?.result?.download?.url
   }
 ];
 
@@ -26,17 +16,12 @@ const getAudioUrl = async (videoUrl) => {
   let lastError = null;
   for (const api of APIS) {
     try {
-      console.log(`Probando API: ${api.name}`);
       const res = await fetch(api.url(videoUrl), { timeout: 15000 });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const audioUrl = api.extract(data);
-      if (audioUrl) {
-        console.log(`Éxito con API: ${api.name}`);
-        return audioUrl;
-      }
+      if (audioUrl) return audioUrl;
     } catch (e) {
-      console.error(`Error con API ${api.name}:`, e.message);
       lastError = e;
     }
   }
@@ -49,15 +34,14 @@ const convertToWhatsAppPtt = (input, output) => {
       "-y",
       "-i", input,
       "-vn",
-      "-ar", "16000",      // WhatsApp exige 16kHz en notas de voz
-      "-ac", "1",          // mono
+      "-ar", "16000",
+      "-ac", "1",
       "-c:a", "libopus",
-      "-b:a", "32k",       // bitrate bajo y estable para PTT
+      "-b:a", "64k",
       "-f", "ogg",
       output
     ]);
-
-    ffmpeg.stderr.on("data", d => console.log("FFmpeg:", d.toString()));
+    ffmpeg.stderr.on("data", () => {});
     ffmpeg.on("close", (code) => {
       if (code === 0) resolve(output);
       else reject(new Error("Error al convertir a WhatsApp PTT"));
@@ -69,9 +53,11 @@ let handler = async (m, { conn }) => {
   const body = m.text?.trim();
   if (!body) return;
   if (!/^play|.play\s+/i.test(body)) return;
-
   const query = body.replace(/^(play|.play)\s+/i, "").trim();
   if (!query) throw `⭐ Escribe el nombre de la canción\n\nEjemplo: play Bad Bunny - Monaco`;
+
+  const tmpMp3 = path.join(process.cwd(), `${Date.now()}-in`);
+  const tmpOgg = path.join(process.cwd(), `${Date.now()}-out.ogg`);
 
   try {
     await conn.sendMessage(m.chat, { react: { text: "🕒", key: m.key } });
@@ -87,18 +73,14 @@ let handler = async (m, { conn }) => {
 
     await conn.sendMessage(m.chat, {
       image: { url: video.thumbnail },
-      caption: `> *𝚈𝙾𝚄𝚃𝚄𝙱𝙴 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*\n\n` +
-               `🎵 *Título:* ${video.title}\n` +
-               `🎤 *Artista:* ${video.author.name || "Desconocido"}\n` +
-               `🕑 *Duración:* ${durationFormatted}`,
+      caption: `> *𝚈𝙾𝚄𝚃𝚄𝙱𝙴 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*\n\n🎵 *Título:* ${video.title}\n🎤 *Artista:* ${video.author.name || "Desconocido"}\n🕑 *Duración:* ${durationFormatted}`
     }, { quoted: m });
 
     const audioUrl = await getAudioUrl(video.url);
 
-    const tmpMp3 = path.join(process.cwd(), `${Date.now()}.mp3`);
-    const tmpOgg = path.join(process.cwd(), `${Date.now()}.ogg`);
-
     const res = await fetch(audioUrl);
+    if (!res.ok) throw new Error(`Error al descargar audio: HTTP ${res.status}`);
+
     const fileStream = fs.createWriteStream(tmpMp3);
     await new Promise((resolve, reject) => {
       res.body.pipe(fileStream);
@@ -108,29 +90,22 @@ let handler = async (m, { conn }) => {
 
     await convertToWhatsAppPtt(tmpMp3, tmpOgg);
 
+    const oggData = fs.readFileSync(tmpOgg);
     await conn.sendMessage(m.chat, {
-      audio: fs.readFileSync(tmpOgg),
+      audio: oggData,
       mimetype: "audio/ogg; codecs=opus",
       ptt: true
     }, { quoted: m });
 
-    fs.unlinkSync(tmpMp3);
-    fs.unlinkSync(tmpOgg);
-
     await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
 
   } catch (error) {
-    console.error("Error:", error);
     await conn.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
-
-    const errorMsg = typeof error === "string" ? error : 
-      `❌ *Error:* ${error.message || "Ocurrió un problema"}\n\n` +
-      `🔸 *Posibles soluciones:*\n` +
-      `• Verifica el nombre de la canción\n` +
-      `• Intenta con otro tema\n` +
-      `• Prueba más tarde`;
-
+    const errorMsg = typeof error === "string" ? error : `❌ *Error:* ${error.message || "Ocurrió un problema"}`;
     await conn.sendMessage(m.chat, { text: errorMsg }, { quoted: m });
+  } finally {
+    try { if (fs.existsSync(tmpMp3)) fs.unlinkSync(tmpMp3); } catch(e){}
+    try { if (fs.existsSync(tmpOgg)) fs.unlinkSync(tmpOgg); } catch(e){}
   }
 };
 
