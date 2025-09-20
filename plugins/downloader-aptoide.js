@@ -1,23 +1,117 @@
-import Scraper from "@SumiFX/Scraper"
+import axios from "axios";
+import yts from "yt-search";
+import fs from "fs";
+import path from "path";
+import ffmpeg from "fluent-ffmpeg";
+import { promisify } from "util";
+import { pipeline } from "stream";
 
-let handler = async (m, { conn, text, usedPrefix, command }) => {
-if (!text) return m.reply('🍭 Ingresa el nombre de la aplicación que deseas descargar.\n\n`Ejemplo:`\n' + `> *${usedPrefix + command}* WhatsApp`)
+const streamPipe = promisify(pipeline);
 
-try {
-let { name, packname, update, size, thumbnail, dl_url } = await Scraper.aptoide(text)
-if (size.includes('GB') || size.replace(' MB', '') > 300) { return await m.reply('El archivo pesa mas de 300 MB, se canceló la Descarga.')}
-let txt = `╭─⬣「 *Aptoide Download* 」⬣\n`
-    txt += `│  ≡◦ *🍭 Nombre ∙* ${name}\n`
-    txt += `│  ≡◦ *🪴 Packname ∙* ${packname}\n`
-    txt += `│  ≡◦ *⚖ Peso ∙* ${size}\n`
-    txt += `│  ≡◦ *🕜 Peso ∙* ${update}\n`
-    txt += `╰─⬣`
-await conn.sendFile(m.chat, thumbnail, 'thumbnail.jpg', txt, m)
-await conn.sendMessage(m.chat, {document: { url: dl_url }, mimetype: 'application/vnd.android.package-archive', fileName: name + '.apk', caption: null }, {quoted: m})
-} catch {
-}}
-handler.help = ['aptoide <búsqueda>']
-handler.tags = ['downloader']
-handler.command = ['aptoide', 'apk']
-//handler.limit = 5
-export default handler
+const handler = async (msg, { conn, text }) => {
+  if (!text || !/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//i.test(text)) {
+    return conn.sendMessage(
+      msg.key.remoteJid,
+      { text: `❌ Ingresa un link válido de YouTube.` },
+      { quoted: msg }
+    );
+  }
+
+  await conn.sendMessage(msg.key.remoteJid, {
+    react: { text: "🕒", key: msg.key }
+  });
+
+  try {
+    const res = await yts({ videoId: text.split("v=")[1] || text.split("/").pop().split("?")[0] });
+    const video = res || null;
+
+    if (!video) {
+      return conn.sendMessage(
+        msg.key.remoteJid,
+        { text: "❌ No se encontró información del video." },
+        { quoted: msg }
+      );
+    }
+
+    const { url: videoUrl, title, timestamp: duration, author, image: thumbnail } = video;
+    const artista = author?.name || "Desconocido";
+
+    const infoMsg = `
+> *𝚈𝙾𝚄𝚃𝚄𝙱𝙴 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
+
+🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${title}
+🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
+🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration || "Desconocida"}
+`.trim();
+
+    await conn.sendMessage(
+      msg.key.remoteJid,
+      { image: { url: thumbnail }, caption: infoMsg },
+      { quoted: msg }
+    );
+
+    const qualities = ["320kbps", "256kbps", "192kbps", "128kbps", "64kbps"];
+    let audioUrl = null;
+
+    for (let q of qualities) {
+      try {
+        const api = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=${q}&apikey=russellxz`;
+        const r = await axios.get(api);
+        if (r.data?.status && r.data.data?.url) {
+          audioUrl = r.data.data.url;
+          break;
+        }
+      } catch {}
+    }
+
+    if (!audioUrl) throw new Error("No se pudo obtener el audio");
+
+    const tmp = path.join(process.cwd(), "tmp");
+    if (!fs.existsSync(tmp)) fs.mkdirSync(tmp);
+    const inFile = path.join(tmp, `${Date.now()}_in.m4a`);
+    const outFile = path.join(tmp, `${Date.now()}_out.mp3`);
+
+    const dl = await axios.get(audioUrl, { responseType: "stream" });
+    await streamPipe(dl.data, fs.createWriteStream(inFile));
+
+    await new Promise((res, rej) =>
+      ffmpeg(inFile)
+        .audioCodec("libmp3lame")
+        .format("mp3")
+        .save(outFile)
+        .on("end", res)
+        .on("error", rej)
+    );
+
+    const buffer = fs.readFileSync(outFile);
+
+    await conn.sendMessage(
+      msg.key.remoteJid,
+      {
+        audio: buffer,
+        mimetype: "audio/mpeg",
+        fileName: `${title}.mp3`,
+        ptt: false
+      },
+      { quoted: msg }
+    );
+
+    fs.unlinkSync(inFile);
+    fs.unlinkSync(outFile);
+
+    await conn.sendMessage(msg.key.remoteJid, {
+      react: { text: "✅", key: msg.key }
+    });
+  } catch (e) {
+    console.error(e);
+    await conn.sendMessage(
+      msg.key.remoteJid,
+      { text: "⚠️ Error al descargar el audio." },
+      { quoted: msg }
+    );
+  }
+};
+
+handler.command = ["ytmp3"];
+
+export default handler;
