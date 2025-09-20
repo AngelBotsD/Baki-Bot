@@ -115,6 +115,5 @@ const handler = async (msg, { conn, command }) => {
 handler.command = ['tl', 'tourl'];
 handler.help = ['tourl'];
 handler.tags = ['herramientas'];
-handler.register = true;
 
 export default handler;
