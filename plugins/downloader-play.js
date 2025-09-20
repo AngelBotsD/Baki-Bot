@@ -8,8 +8,6 @@ import { pipeline } from "stream"
 const streamPipe = promisify(pipeline)
 
 const handler = async (msg, { conn, text }) => {
-  const pref = global.prefixes?.[0] || "."
-
   if (!text || !text.trim()) {
     return conn.sendMessage(
       msg.key.remoteJid,
@@ -61,6 +59,16 @@ const handler = async (msg, { conn, text }) => {
       } catch {}
     }
 
+    if (!url) {
+      const r = await axios.get(
+        `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&apikey=russellxz`
+      )
+      if (r.data?.status && r.data.data?.url) {
+        url = r.data.data.url
+        quality = r.data.data.quality || "Desconocida"
+      }
+    }
+
     if (!url) throw new Error("No se pudo obtener el video")
 
     const tmp = path.join(process.cwd(), "tmp")
@@ -76,7 +84,7 @@ const handler = async (msg, { conn, text }) => {
         video: fs.readFileSync(file),
         mimetype: "video/mp4",
         fileName: `${title} [${quality}].mp4`,
-        caption: caption + `\n📹 *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${quality}`
+        caption: caption + `\n📹 *Calidad:* ${quality}`
       },
       { quoted: msg }
     )
