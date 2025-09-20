@@ -108,6 +108,5 @@ const handler = async (msg, { conn, text, usedPrefix, command }) => {
 handler.command = ['ytmp4'];
 handler.help = ['ytmp4 <enlace>'];
 handler.tags = ['descargas'];
-handler.register = true;
 
 export default handler;
