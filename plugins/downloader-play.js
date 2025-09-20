@@ -44,8 +44,9 @@ const handler = async (msg, { conn, text }) => {
 `.trim()
 
   try {
-    const qualities = ["720p", "480p", "360p"]
+    const qualities = ["2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p"]
     let url = null
+    let quality = null
 
     for (let q of qualities) {
       try {
@@ -54,6 +55,7 @@ const handler = async (msg, { conn, text }) => {
         )
         if (r.data?.status && r.data.data?.url) {
           url = r.data.data.url
+          quality = q
           break
         }
       } catch {}
@@ -73,8 +75,8 @@ const handler = async (msg, { conn, text }) => {
       {
         video: fs.readFileSync(file),
         mimetype: "video/mp4",
-        fileName: `${title}.mp4`,
-        caption
+        fileName: `${title} [${quality}].mp4`,
+        caption: caption + `\n📹 *Calidad:* ${quality}`
       },
       { quoted: msg }
     )
