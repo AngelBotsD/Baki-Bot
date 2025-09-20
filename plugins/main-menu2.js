@@ -1,4 +1,11 @@
 const handler = async (m, { conn }) => {
+
+    let fkontak = { 
+      "key": { "participants":"0@s.whatsapp.net", "remoteJid": "status@broadcast", "fromMe": false, "id": "Halo" }, 
+      "message": { "contactMessage": { "vcard": `BEGIN:VCARD\nVERSION:3.0\nN:Sy;Bot;;;\nFN:y\nitem1.TEL;waid=${m.sender.split('@')[0]}:${m.sender.split('@')[0]}\nitem1.X-ABLabel:Ponsel\nEND:VCARD` }}, 
+      "participant": "0@s.whatsapp.net" 
+    }
+
   let menu = `👋🏻 𝖧𝗈𝗅𝖺! 𝖻𝗂𝖾𝗇𝗏𝖾𝗇𝗂𝖽𝗈 𝖺𝗅 𝗆𝖾𝗇𝗎𝗀𝗋𝗎𝗉𝗈 𝖽𝖾 *𝖻𝖺𝗄𝗂-𝖡𝗈𝗍 𝖨𝖠* 𝖺𝗊𝗎𝗂́ 𝖾𝗇𝖼𝗈𝗇𝗍𝗋𝖺𝗋𝖺́𝗌 𝗅𝗈𝗌 𝖼𝗈𝗆𝖺𝗇𝖽𝗈𝗌 𝗉𝖺𝗋𝖺 𝗆𝖺𝗇𝗍𝖾𝗇𝖾𝗋 𝗎𝗇 𝗍𝗈𝗍𝖺𝗅 𝗈𝗋𝖽𝖾𝗇 𝖽𝖾 𝗍𝗎́ 𝗀𝗋𝗎𝗉𝗈!
 
 ✮,— \`𝖢𝖮𝖬𝖠𝖭𝖣𝖮𝖲 𝖣𝖤 𝖠𝖣𝖬𝖨𝖭𝖲\` .ᐟᨮׁׅ֮.ᐟ
