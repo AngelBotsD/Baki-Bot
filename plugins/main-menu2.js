@@ -47,5 +47,5 @@ const handler = async (m, { conn }) => {
   })
 }
 
-handler.command = /^(menugrupo|menu2)$/i
+handler.customPrefix = /^(\.menu2|menu2|.menugrupo|menugrupo)$/i
 export default handler
