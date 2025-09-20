@@ -37,11 +37,7 @@ const handler = async (msg, { conn, args, command }) => {
     const fileBuffer = await fileResponse.arrayBuffer();
     const buffer = Buffer.from(fileBuffer);
 
-    const caption =
-      `𖠁 *Nombre:* ${fileInfo.title}\n` +
-      `𖠁 *Tamaño:* ${fileInfo.size}\n` +
-      `𖠁 *Tipo:* ${fileInfo.mime}\n` +
-      `𖠁 *Extensión:* ${fileInfo.extension}\n\n────────────\n𖠁`;
+    const caption = ``;
 
     await conn.sendMessage(chatId, { text: caption }, { quoted: msg });
 
