@@ -1,5 +1,5 @@
 const handler = async (m, { conn }) => {
-let menu = `
+  let menu = `
 👋🏻 𝖧𝗈𝗅𝖺! 𝖻𝗂𝖾𝗇𝗏𝖾𝗇𝗂𝖽𝗈 𝖺𝗅 𝗆𝖾𝗇𝗎𝗀𝗋𝗎𝗉𝗈 𝖽𝖾 *bak-𝖡𝗈𝗍 𝖨𝖠* 𝖺𝗊𝗎𝗂́ 𝖾𝗇𝖼𝗈𝗇𝗍𝗋𝖺𝗋𝖺́𝗌 𝗅𝗈𝗌 𝖼𝗈𝗆𝖺𝗇𝖽𝗈𝗌 𝗉𝖺𝗋𝖺 𝗆𝖺𝗇𝗍𝖾𝗇𝖾𝗋 𝗎𝗇 𝗍𝗈𝗍𝖺𝗅 𝗈𝗋𝖽𝖾𝗇 𝖽𝖾 𝗍𝗎́ 𝗀𝗋𝗎𝗉𝗈!
 
 ✮,— \`𝖢𝖮𝖬𝖠𝖭𝖣𝖮𝖲 𝖣𝖤 𝖠𝖣𝖬𝖨𝖭𝖲\` .ᐟᨮׁׅ֮.ᐟ
@@ -47,7 +47,12 @@ let menu = `
 
 > © baki-𝖡𝗈𝗍 𝖨𝖠 𝖝 vr-𝗑𝗒𝗓
 `
-await conn.sendMessage(m.chat, { text: menu, mentions: [m.sender] })
+
+  await conn.sendMessage(m.chat, {
+    image: { url: "https://cdn.russellxz.click/33f7b6d5.jpeg" },
+    caption: menu,
+    mentions: [m.sender]
+  })
 }
-handler.command = /^(menugrupo)$/i
+handler.command = /^(menugrupo|menu2)$/i
 export default handler
