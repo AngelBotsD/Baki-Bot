@@ -11,7 +11,7 @@ const handler = async (msg, { conn, text }) => {
   if (!text || !/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//i.test(text)) {
     return conn.sendMessage(
       msg.key.remoteJid,
-      { text: `❌ Ingresa un link válido de YouTube.` },
+      { text: `📎 *𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝚄𝚗 𝙻𝚒𝚗𝚔 𝚍𝚎 𝚈𝚘𝚞𝚝𝚞𝚋𝚎*` },
       { quoted: msg }
     )
   }
@@ -28,7 +28,7 @@ const handler = async (msg, { conn, text }) => {
     const artista = author?.name || "Desconocido"
 
     const caption = `
-> *𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
+> *𝚈𝚃𝙼𝙿4 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
 🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${title}
 🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
@@ -67,7 +67,7 @@ const handler = async (msg, { conn, text }) => {
         video: fs.readFileSync(file),
         mimetype: "video/mp4",
         fileName: `${title} [${quality}].mp4`,
-        caption: caption + `\n📹 *Calidad:* ${quality}`
+        caption: caption + `\n📹 *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${quality}`
       },
       { quoted: msg }
     )
