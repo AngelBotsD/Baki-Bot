@@ -43,7 +43,7 @@ const handler = async (msg, { conn, text }) => {
     for (let q of posibles) {
       try {
         const r = await axios.get(
-          `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=russellxz`
+          `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=soymaycol`
         )
         if (r.data?.status && r.data.data?.url) {
           url = r.data.data.url
