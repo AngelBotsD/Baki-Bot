@@ -1,19 +1,17 @@
 import axios from "axios"
-import yts from "yt-search"
 import fs from "fs"
 import path from "path"
 import { promisify } from "util"
 import { pipeline } from "stream"
+import yts from "yt-search"
 
 const streamPipe = promisify(pipeline)
 
 const handler = async (msg, { conn, text }) => {
-  const pref = global.prefixes?.[0] || "."
-
-  if (!text || !text.trim()) {
+  if (!text) {
     return conn.sendMessage(
       msg.key.remoteJid,
-      { text: `*🎬 𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝙴𝚕 𝙽𝚘𝚖𝚋𝚛𝚎 𝚍𝚎 𝙰𝚕𝚐𝚞𝚗 𝚅𝚒𝚍𝚎𝚘*` },
+      { text: `📎 *𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝚎𝚕 𝚗𝚘𝚖𝚋𝚛𝚎 𝚍𝚎 𝚞𝚗𝚊 𝚌𝚊𝚗𝚌𝚒ó𝚗 𝚙𝚊𝚛𝚊 𝚋𝚞𝚜𝚌𝚊𝚛 𝚎𝚗 𝚈𝚘𝚞𝚝𝚞𝚋𝚎*` },
       { quoted: msg }
     )
   }
@@ -22,38 +20,34 @@ const handler = async (msg, { conn, text }) => {
     react: { text: "🕒", key: msg.key }
   })
 
-  const res = await yts(text)
-  const video = res.videos[0]
-  if (!video) {
-    return conn.sendMessage(
-      msg.key.remoteJid,
-      { text: "❌ Sin resultados." },
-      { quoted: msg }
-    )
-  }
+  try {
+    const search = await yts(text)
+    if (!search.videos.length) throw new Error("No encontré resultados")
+    const video = search.videos[0]
 
-  const { url: videoUrl, title, timestamp: duration, author } = video
-  const artista = author.name
+    const { title, timestamp: duration, author, url: videoUrl } = video
+    const artista = author?.name || "Desconocido"
 
-  const caption = `
-> 𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁
+    const caption = `
+> *𝚈𝚃𝙼𝙿4 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
-🎵 𝚃𝚒𝚝𝚞𝚕𝚘: ${title}
-🎤 𝙰𝚛𝚝𝚒𝚜𝚝𝚊: ${artista}
-🕑 𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗: ${duration}
+🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${title}
+🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
+🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration || "Desconocida"}
 `.trim()
 
-  try {
-    const qualities = ["720p", "480p", "360p"]
     let url = null
+    let quality = null
 
-    for (let q of qualities) {
+    const posibles = ["2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p"]
+    for (let q of posibles) {
       try {
         const r = await axios.get(
           `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=russellxz`
         )
         if (r.data?.status && r.data.data?.url) {
           url = r.data.data.url
+          quality = q
           break
         }
       } catch {}
@@ -73,8 +67,8 @@ const handler = async (msg, { conn, text }) => {
       {
         video: fs.readFileSync(file),
         mimetype: "video/mp4",
-        fileName: `${title}.mp4`,
-        caption
+        fileName: `${title} [${quality}].mp4`,
+        caption: caption + `\n📹 *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${quality}`
       },
       { quoted: msg }
     )
