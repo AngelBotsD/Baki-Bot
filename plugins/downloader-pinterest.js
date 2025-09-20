@@ -27,7 +27,7 @@ const handler = async (msg, { conn, text }) => {
     const { title, timestamp: duration, author } = res
     const artista = author?.name || "Desconocido"
 
-    const captionBase = `
+    const caption = `
 > *𝚈𝚃𝙼𝙿4 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
 🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${title}
@@ -38,9 +38,7 @@ const handler = async (msg, { conn, text }) => {
     let url = null
     let quality = null
 
-    // Del más bajo al más alto
-    const posibles = ["144p", "240p", "360p", "480p", "720p", "1080p", "1440p", "2160p"]
-
+    const posibles = ["2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p"]
     for (let q of posibles) {
       try {
         const r = await axios.get(
@@ -63,15 +61,13 @@ const handler = async (msg, { conn, text }) => {
     const dl = await axios.get(url, { responseType: "stream" })
     await streamPipe(dl.data, fs.createWriteStream(file))
 
-    const captionFinal = captionBase + `\n📹 *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${quality}`
-
     await conn.sendMessage(
       msg.key.remoteJid,
       {
         video: fs.readFileSync(file),
         mimetype: "video/mp4",
         fileName: `${title} [${quality}].mp4`,
-        caption: captionFinal
+        caption: caption + `\n📹 *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${quality}`
       },
       { quoted: msg }
     )
