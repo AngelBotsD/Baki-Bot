@@ -76,7 +76,7 @@ const handler = async (msg, { conn, text }) => {
         video: fs.readFileSync(file),
         mimetype: "video/mp4",
         fileName: `${title} [${quality}].mp4`,
-        caption: caption + `\n📹 *Calidad:* ${quality}`
+        caption: caption + `\n📹 *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${quality}`
       },
       { quoted: msg }
     )
