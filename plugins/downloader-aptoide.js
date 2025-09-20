@@ -12,7 +12,7 @@ const handler = async (msg, { conn, text }) => {
   if (!text || !/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//i.test(text)) {
     return conn.sendMessage(
       msg.key.remoteJid,
-      { text: `❌ Ingresa un link válido de YouTube.` },
+      { text: `📎 *𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝚞𝚗 𝚕𝚒𝚗𝚔 𝚍𝚎 𝚢𝚘𝚞𝚝𝚞𝚋𝚎 𝙿𝚊𝚛𝚊 𝙳𝚎𝚜𝚌𝚊𝚛𝚐𝚊𝚛 𝚎𝚕 𝙰𝚞𝚍𝚒𝚘*` },
       { quoted: msg }
     );
   }
@@ -28,7 +28,7 @@ const handler = async (msg, { conn, text }) => {
     if (!video) {
       return conn.sendMessage(
         msg.key.remoteJid,
-        { text: "❌ No se encontró información del video." },
+        { text: "❌ *𝙽𝚘 𝚜𝚎 𝚎𝚗𝚌𝚘𝚗𝚝𝚛𝚘 𝚒𝚗𝚏𝚘𝚛𝚖𝚊𝚌𝚒𝚘́𝚗*" },
         { quoted: msg }
       );
     }
