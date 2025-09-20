@@ -9,17 +9,14 @@ const streamPipeline = promisify(pipeline);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const handler = async (msg, { conn, text, usedPrefix, command }) => {
-  const chatId = msg.key.remoteJid;
-  const pref = global.prefixes?.[0] || usedPrefix || '.';
-
+const handler = async (msg, { conn, text, usedPrefix }) => {
   if (!text || (!text.includes('youtube.com') && !text.includes('youtu.be'))) {
-    return conn.sendMessage(chatId, {
-      text: `✳️ *Usa:*\n${pref}${command} <enlace de YouTube>\n📌 Ej: *${pref}${command}* https://youtube.com/watch?v=abc123`
+    return await conn.sendMessage(msg.key.remoteJid, {
+      text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${usedPrefix}ytmp4* https://youtube.com/watch?v=...`
     }, { quoted: msg });
   }
 
-  await conn.sendMessage(chatId, {
+  await conn.sendMessage(msg.key.remoteJid, {
     react: { text: '⏳', key: msg.key }
   });
 
@@ -46,14 +43,15 @@ const handler = async (msg, { conn, text, usedPrefix, command }) => {
           };
           break;
         }
-      } catch { continue; }
+      } catch {
+        continue;
+      }
     }
 
-    if (!videoData) throw new Error('❌ No se pudo obtener el video en ninguna calidad. Talvez excede el límite de 99MB.');
+    if (!videoData) throw new Error('No se pudo obtener el video en ninguna calidad');
 
-    const tmpDir = path.join(__dirname, 'tmp');
+    const tmpDir = path.join(__dirname, '../tmp');
     if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-
     const filePath = path.join(tmpDir, `${Date.now()}_video.mp4`);
 
     const response = await axios.get(videoData.url, {
@@ -65,21 +63,29 @@ const handler = async (msg, { conn, text, usedPrefix, command }) => {
     const stats = fs.statSync(filePath);
     if (!stats || stats.size < 100000) {
       fs.unlinkSync(filePath);
-      throw new Error('❌ El video descargado está vacío o incompleto.');
+      throw new Error('El video descargado está vacío o incompleto');
     }
 
-    const caption = `🎬 *𝑽𝒊𝒅𝒆𝒐 𝒅𝒆 𝒀𝒐𝒖𝑻𝒖𝒃𝒆 𝒅𝒆𝒔𝒄𝒂𝒓𝒈𝒂𝒅𝒐*\n\n` +
-      `𖠁 *Título:* ${videoData.title}\n` +
-      `𖠁 *Duración:* ${videoData.duration}\n` +
-      `𖠁 *Vistas:* ${videoData.views}\n` +
-      `𖠁 *Canal:* ${videoData.channel}\n` +
-      `𖠁 *Publicado:* ${videoData.publish}\n` +
-      `𖠁 *Tamaño:* ${videoData.size}\n` +
-      `𖠁 *Calidad:* ${videoData.quality}\n` +
-      `𖠁 *Link:* https://youtu.be/${videoData.id}\n\n` +
-      `𖠁 *¿No se reproduce?* Usa _${pref}ff_\n\n𖠁 *Procesado por La Suki Bot*`;
+    const caption = `
+╔═════════════════╗
+║ ✦ 𝗔𝘇𝘂𝗿𝗮 𝗨𝗹𝘁𝗿𝗮 2.0 𝗦𝘂𝗯𝗯𝗼𝘁 ✦
+╚═════════════════╝
 
-    await conn.sendMessage(chatId, {
+📀 *Info del video:*  
+├ 🎼 *Título:* ${videoData.title}
+├ ⏱️ *Duración:* ${videoData.duration}
+├ 👁️ *Vistas:* ${videoData.views}
+├ 👤 *Canal:* ${videoData.channel}
+├ 🗓️ *Publicado:* ${videoData.publish}
+├ 📦 *Tamaño:* ${videoData.size}
+├ 📹 *Calidad:* ${videoData.quality}
+└ 🔗 *Link:* https://youtu.be/${videoData.id}
+
+⚠️ ¿No se reproduce? Usa _${usedPrefix}ff_
+
+⏳ *Procesado por Azura Ultra 2.0 Subbot*`;
+
+    await conn.sendMessage(msg.key.remoteJid, {
       video: fs.readFileSync(filePath),
       mimetype: 'video/mp4',
       fileName: `${videoData.title}.mp4`,
@@ -89,24 +95,20 @@ const handler = async (msg, { conn, text, usedPrefix, command }) => {
 
     fs.unlinkSync(filePath);
 
-    await conn.sendMessage(chatId, {
+    await conn.sendMessage(msg.key.remoteJid, {
       react: { text: '✅', key: msg.key }
     });
 
   } catch (err) {
-    console.error("❌ Error en .ytmp4:", err.message);
-    await conn.sendMessage(chatId, {
-      text: `❌ *Error al procesar el video:*\n_${err.message}_`
+    console.error(err);
+    await conn.sendMessage(msg.key.remoteJid, {
+      text: `❌ *Error:* ${err.message}`
     }, { quoted: msg });
-
-    await conn.sendMessage(chatId, {
+    await conn.sendMessage(msg.key.remoteJid, {
       react: { text: '❌', key: msg.key }
     });
   }
 };
 
 handler.command = ['ytmp4'];
-handler.help = ['ytmp4 <enlace>'];
-handler.tags = ['descargas'];
-
 export default handler;
