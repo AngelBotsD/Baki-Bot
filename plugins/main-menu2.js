@@ -32,10 +32,12 @@ const handler = async (m, { conn }) => {
 > © 𝖻𝖺𝗄𝗂-𝖡𝗈𝗍 𝖨𝖠 𝖝 𝗁𝖾𝗋𝗇𝖺𝗇𝖽𝖾𝗓-𝗑𝗒𝗓
 `
 
+  // reacción al mensaje
   await conn.sendMessage(m.chat, {
     react: { text: '🧾', key: m.key }
   })
 
+  // el menú citando el mensaje del comando
   await conn.sendMessage(m.chat, {
     image: { url: "https://cdn.russellxz.click/33f7b6d5.jpeg" },
     caption: menu,
