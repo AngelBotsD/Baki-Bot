@@ -37,14 +37,12 @@ const handler = async (m, { conn }) => {
     react: { text: '🧾', key: m.key }
   })
 
-  // el menú citando el mensaje del comando
   await conn.sendMessage(m.chat, {
-    image: { url: "https://cdn.russellxz.click/33f7b6d5.jpeg" },
-    caption: menu,
-    mentions: [m.sender],
-    quoted: m
-  })
-}
+  image: { url: "https://cdn.russellxz.click/33f7b6d5.jpeg" },
+  caption: menu,
+  mentions: [m.sender],
+  quoted: m 
+})
 
 handler.customPrefix = /^(\.menu2|menu2|.menugrupo|menugrupo)$/i
 handler.command = new RegExp
