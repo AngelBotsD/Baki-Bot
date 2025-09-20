@@ -29,7 +29,7 @@ const handler = async (m, { conn }) => {
 ⭒ ִֶָ७ ꯭🥤˙⋆｡ -𝗈𝗇/𝗈𝖿𝖿 𝖺𝗇𝗍𝗂𝗅𝗂𝗇𝗄
 ⭒ ִֶָ७ ꯭🥤˙⋆｡ -𝗈𝗇/𝗈𝖿𝖿 𝗇𝗌𝖿𝗐
 
-> © 𝖻𝖺𝗄𝗂-𝖡𝗈𝗍 𝖨𝖠 𝖝 𝗁𝖾𝗋𝗇𝖺𝗇𝖽𝗲𝗓-𝗑𝗒𝗓
+> © 𝖻𝖺𝗄𝗂-𝖡𝗈𝗍 𝖨𝖠 𝖝 𝗁𝖾𝗋𝗇𝖺𝗇𝖽𝖾𝗓-𝗑𝗒𝗓
 `
 
   await conn.sendMessage(m.chat, {
@@ -39,7 +39,8 @@ const handler = async (m, { conn }) => {
   await conn.sendMessage(m.chat, {
     image: { url: "https://cdn.russellxz.click/33f7b6d5.jpeg" },
     caption: menu,
-    mentions: [m.sender]
+    mentions: [m.sender],
+    quoted: m
   })
 }
 
