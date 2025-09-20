@@ -21,7 +21,6 @@ const handler = async (msg, { conn, text }) => {
   })
 
   try {
-    // Obtener información del video a partir del link
     const res = await yts({ videoId: text.split("v=")[1] || text.split("/").pop().split("?")[0] })
     if (!res) throw new Error("No se pudo obtener información del video")
 
@@ -29,24 +28,25 @@ const handler = async (msg, { conn, text }) => {
     const artista = author?.name || "Desconocido"
 
     const caption = `
-> *VIDEO DOWNLOADER*
+> *𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
-🎵 *Título:* ${title}
-🎤 *Canal:* ${artista}
-🕑 *Duración:* ${duration || "Desconocida"}
+🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${title}
+🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
+🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration || "Desconocida"}
 `.trim()
 
-    // Descargar en la mejor calidad disponible
-    const qualities = ["720p", "480p", "360p"]
     let url = null
+    let quality = null
 
-    for (let q of qualities) {
+    const posibles = ["2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p"]
+    for (let q of posibles) {
       try {
         const r = await axios.get(
           `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(text)}&type=video&quality=${q}&apikey=russellxz`
         )
         if (r.data?.status && r.data.data?.url) {
           url = r.data.data.url
+          quality = q
           break
         }
       } catch {}
@@ -54,28 +54,24 @@ const handler = async (msg, { conn, text }) => {
 
     if (!url) throw new Error("No se pudo obtener el video")
 
-    // Crear carpeta temporal
     const tmp = path.join(process.cwd(), "tmp")
     if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
     const file = path.join(tmp, `${Date.now()}_vid.mp4`)
 
-    // Descargar y guardar
     const dl = await axios.get(url, { responseType: "stream" })
     await streamPipe(dl.data, fs.createWriteStream(file))
 
-    // Enviar el video
     await conn.sendMessage(
       msg.key.remoteJid,
       {
         video: fs.readFileSync(file),
         mimetype: "video/mp4",
-        fileName: `${title}.mp4`,
-        caption
+        fileName: `${title} [${quality}].mp4`,
+        caption: caption + `\n📹 *Calidad:* ${quality}`
       },
       { quoted: msg }
     )
 
-    // Borrar archivo temporal
     fs.unlinkSync(file)
 
     await conn.sendMessage(msg.key.remoteJid, {
