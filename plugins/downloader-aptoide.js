@@ -37,7 +37,7 @@ const handler = async (msg, { conn, text }) => {
     const artista = author?.name || "Desconocido";
 
     const infoMsg = `
-> *𝚈𝙾𝚄𝚃𝚄𝙱𝙴 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
+> *𝚈𝚃𝙼𝙿3 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
 🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${title}
 🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
