@@ -1,18 +1,36 @@
 import fetch from 'node-fetch'
-const regex = /(?:https|git)(?::\/\/|@)github\.com[\/:]([^\/:]+)\/(.+)/i
-let handler = async (m, { conn, args, usedPrefix, command }) => {
-if (!args[0]) return m.reply('🍭 Ingresa el enlace del vídeo de Instagram junto al comando.\n\n`Ejemplo:`\n' + `> *${usedPrefix + command}* https://github.com/xxxx.git`)
-try {
-if (!regex.test(args[0])) return `La Url es invalida.`
-let [_, user, repo] = args[0].match(regex) || []
-repo = repo.replace(/.git$/, '')
-let url = `https://api.github.com/repos/${user}/${repo}/zipball`
-let filename = (await fetch(url, { method: 'HEAD' })).headers.get('content-disposition').match(/attachment; filename=(.*)/)[1]
-await conn.sendFile(m.chat, url, filename, null, m)
-} catch {
-}}
-handler.help = ['gitclone <url git>']
-handler.tags = ['downloader']
-handler.command = ['gitclone']  
-//handler.limit = 1
-export default handler
+
+let handler = async (m, { text, conn, command }) => {
+  try {
+    if (!text) return m.reply('¡Ingresa una palabra clave para buscar videos de TikTok!\nEjemplo: .ttsearch tobrut')
+
+    await conn.sendMessage(m.chat, { react: { text: "⏰", key: m.key }})
+
+    let res = await fetch(`https://www.sankavolereii.my.id/search/tiktok?apikey=planaai&q=${encodeURIComponent(text)}`)
+    let json = await res.json()
+    if (!json.status || !json.result.length) return m.reply('❌ No se encontraron resultados.')
+
+    let random = json.result[Math.floor(Math.random() * json.result.length)]
+    let {
+      title,
+      duration,
+      play,
+      digg_count,
+      comment_count,
+      share_count,
+      author
+    } = random
+
+    let caption = `🎬 *${title}*\n👤 *${author.nickname}* (@${author.unique_id})\n⏱️ *Duración:* ${duration}s\n❤️ *Me gusta:* ${digg_count.toLocaleString()}\n💬 *Comentarios:* ${comment_count.toLocaleString()}\n🔁 *Compartir:* ${share_count.toLocaleString()}`
+
+    let sent = await conn.sendFile(m.chat, play, 'tiktok.mp4', caption, m)
+
+  } catch (e) {
+    console.log(e)
+    m.reply(`❌ Error\nRegistro de error: ${e.message || e}`)
+  }
+}
+
+handler.help = ['ttsearch <consulta>']
+handler.tags = ['buscador']
+handler.command = ['ttse', 'tiktoksearch']
