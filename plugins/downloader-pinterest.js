@@ -1,114 +1,95 @@
-import axios from 'axios';
-import fs from 'fs';
-import path from 'path';
-import { pipeline } from 'stream';
-import { promisify } from 'util';
-import { fileURLToPath } from 'url';
+import axios from "axios";
+import fs from "fs";
+import path from "path";
+import { pipeline } from "stream";
+import { promisify } from "util";
+import { fileURLToPath } from "url";
 
 const streamPipeline = promisify(pipeline);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const handler = async (msg, { conn, text, usedPrefix }) => {
-  if (!text || (!text.includes('youtube.com') && !text.includes('youtu.be'))) {
-    return await conn.sendMessage(msg.key.remoteJid, {
-      text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${usedPrefix}ytmp4* https://youtube.com/watch?v=...`
+const handler = async (msg, { conn, text, usedPrefix, command }) => {
+  const chatId = msg.key.remoteJid;
+  const args = text?.split(" ") || [];
+  let qualityArg, url;
+
+  // Verificar si el primer argumento es calidad
+  if (args.length > 1 && /^\d+p$/.test(args[0])) {
+    qualityArg = args[0];
+    url = args[1];
+  } else {
+    url = args[0];
+  }
+
+  if (!url || (!url.includes("youtube.com") && !url.includes("youtu.be"))) {
+    return conn.sendMessage(chatId, {
+      text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo:\n- *${usedPrefix}${command}* 720p https://youtube.com/watch?v=abc123\n- *${usedPrefix}${command}* https://youtube.com/watch?v=abc123 (automático)`
     }, { quoted: msg });
   }
 
-  await conn.sendMessage(msg.key.remoteJid, {
-    react: { text: '⏳', key: msg.key }
-  });
+  await conn.sendMessage(chatId, { react: { text: "⏳", key: msg.key } });
 
   try {
-    const qualities = ['720p', '480p', '360p'];
-    let videoData = null;
+    // Pedir info al API
+    const apiUrl = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(url)}&type=video&apikey=russellxz`;
+    const response = await axios.get(apiUrl);
+    if (!response.data?.status) throw new Error("No se pudo obtener la información del video");
 
-    for (let quality of qualities) {
-      try {
-        const apiUrl = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(text)}&type=video&quality=${quality}&apikey=russellxz`;
-        const response = await axios.get(apiUrl);
-        if (response.data?.status && response.data?.data?.url) {
-          videoData = {
-            url: response.data.data.url,
-            title: response.data.title || 'video',
-            thumbnail: response.data.thumbnail,
-            duration: response.data.fduration,
-            views: response.data.views,
-            channel: response.data.channel,
-            quality: response.data.data.quality || quality,
-            size: response.data.data.size || 'Desconocido',
-            publish: response.data.publish || 'Desconocido',
-            id: response.data.id || ''
-          };
-          break;
-        }
-      } catch {
-        continue;
-      }
+    const formats = response.data.data; // contiene todas las calidades disponibles
+    if (!formats || formats.length === 0) throw new Error("No hay calidades disponibles");
+
+    // Elegir calidad
+    let chosen = null;
+    if (qualityArg) {
+      chosen = formats.find(f => f.quality === qualityArg);
+      if (!chosen) throw new Error(`No se encontró la calidad *${qualityArg}* disponible.\nDisponibles: ${formats.map(f => f.quality).join(", ")}`);
+    } else {
+      // tomar la mejor (la primera suele ser la mayor calidad)
+      chosen = formats[0];
     }
 
-    if (!videoData) throw new Error('No se pudo obtener el video en ninguna calidad');
-
-    const tmpDir = path.join(__dirname, '../tmp');
+    const tmpDir = path.join(__dirname, "../tmp");
     if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-    const filePath = path.join(tmpDir, `${Date.now()}_video.mp4`);
+    const filePath = path.join(tmpDir, `${Date.now()}_yt.mp4`);
 
-    const response = await axios.get(videoData.url, {
-      responseType: 'stream',
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
-    await streamPipeline(response.data, fs.createWriteStream(filePath));
+    // Descargar
+    const dlRes = await axios.get(chosen.url, { responseType: "stream", headers: { "User-Agent": "Mozilla/5.0" } });
+    await streamPipeline(dlRes.data, fs.createWriteStream(filePath));
 
     const stats = fs.statSync(filePath);
     if (!stats || stats.size < 100000) {
       fs.unlinkSync(filePath);
-      throw new Error('El video descargado está vacío o incompleto');
+      throw new Error("El video descargado está vacío o incompleto");
     }
 
-    const caption = `
-╔═════════════════╗
-║ ✦ 𝗔𝘇𝘂𝗿𝗮 𝗨𝗹𝘁𝗿𝗮 2.0 𝗦𝘂𝗯𝗯𝗼𝘁 ✦
-╚═════════════════╝
+    const caption = `🎬 *YouTube Downloader* 🎬\n\n` +
+      `𖠁 *Título:* ${response.data.title}\n` +
+      `𖠁 *Duración:* ${response.data.fduration}\n` +
+      `𖠁 *Vistas:* ${response.data.views}\n` +
+      `𖠁 *Canal:* ${response.data.channel}\n` +
+      `𖠁 *Publicado:* ${response.data.publish}\n` +
+      `𖠁 *Tamaño:* ${chosen.size || "Desconocido"}\n` +
+      `𖠁 *Calidad:* ${chosen.quality}\n` +
+      `𖠁 *Link:* https://youtu.be/${response.data.id}\n\n` +
+      `⚠️ *¿No se reproduce?* Usa _${usedPrefix}ff_`;
 
-📀 *Info del video:*  
-├ 🎼 *Título:* ${videoData.title}
-├ ⏱️ *Duración:* ${videoData.duration}
-├ 👁️ *Vistas:* ${videoData.views}
-├ 👤 *Canal:* ${videoData.channel}
-├ 🗓️ *Publicado:* ${videoData.publish}
-├ 📦 *Tamaño:* ${videoData.size}
-├ 📹 *Calidad:* ${videoData.quality}
-└ 🔗 *Link:* https://youtu.be/${videoData.id}
-
-⚠️ ¿No se reproduce? Usa _${usedPrefix}ff_
-
-⏳ *Procesado por Azura Ultra 2.0 Subbot*`;
-
-    await conn.sendMessage(msg.key.remoteJid, {
+    await conn.sendMessage(chatId, {
       video: fs.readFileSync(filePath),
-      mimetype: 'video/mp4',
-      fileName: `${videoData.title}.mp4`,
-      caption,
-      gifPlayback: false
+      mimetype: "video/mp4",
+      fileName: `${response.data.title}.mp4`,
+      caption
     }, { quoted: msg });
 
     fs.unlinkSync(filePath);
-
-    await conn.sendMessage(msg.key.remoteJid, {
-      react: { text: '✅', key: msg.key }
-    });
+    await conn.sendMessage(chatId, { react: { text: "✅", key: msg.key } });
 
   } catch (err) {
-    console.error(err);
-    await conn.sendMessage(msg.key.remoteJid, {
-      text: `❌ *Error:* ${err.message}`
-    }, { quoted: msg });
-    await conn.sendMessage(msg.key.remoteJid, {
-      react: { text: '❌', key: msg.key }
-    });
+    console.error("❌ Error en ytmp4:", err.message);
+    await conn.sendMessage(chatId, { text: `❌ *Error:* ${err.message}` }, { quoted: msg });
+    await conn.sendMessage(chatId, { react: { text: "❌", key: msg.key } });
   }
 };
 
-handler.command = ['ytmp4'];
+handler.command = ["ytmp4"];
 export default handler;
