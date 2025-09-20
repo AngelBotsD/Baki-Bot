@@ -18,7 +18,7 @@ const handler = async (msg, { conn, args, command }) => {
   }
 
   await conn.sendMessage(chatId, {
-    react: { text: "⏳", key: msg.key }
+    react: { text: "🕒", key: msg.key }
   });
 
   try {
@@ -36,8 +36,6 @@ const handler = async (msg, { conn, args, command }) => {
 
     const fileBuffer = await fileResponse.arrayBuffer();
     const buffer = Buffer.from(fileBuffer);
-
-    const caption = ``;
 
     await conn.sendMessage(chatId, { text: caption }, { quoted: msg });
 
