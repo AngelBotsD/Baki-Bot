@@ -7,19 +7,18 @@ const handler = async (msg, { conn, args, command }) => {
 
   if (!text) {
     return conn.sendMessage(chatId, {
-      text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo:\n${pref}${command} https://www.mediafire.com/file/ejemplo/file.zip`
+      text: `📎 *𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝚄𝚗 𝙴𝚗𝚕𝚊𝚌𝚎 𝚍𝚎 𝙼𝚎𝚍𝚒𝚊𝚏𝚒𝚛𝚎 𝙿𝚊𝚛𝚊 𝙳𝚎𝚜𝚌𝚊𝚛𝚐𝚊𝚛𝚕𝚘*`
     }, { quoted: msg });
   }
 
   if (!/^https?:\/\/(www\.)?mediafire\.com/.test(text)) {
     return conn.sendMessage(chatId, {
-      text: `⚠️ *Enlace no válido.*\n📌 Asegúrate de ingresar una URL de MediaFire válida.\n\nEjemplo:\n${pref}${command} https://www.mediafire.com/file/ejemplo/file.zip`
+      text: `⚠️ *𝙴𝚗𝚕𝚊𝚌𝚎 𝚗𝚘 𝚟𝚊𝚕𝚒𝚍𝚘, 𝙰𝚜𝚎𝚐𝚞𝚛𝚊𝚝𝚎 𝚍𝚎 𝚚𝚞𝚎 𝚜𝚎𝚊 𝚞𝚗 𝚎𝚗𝚕𝚊𝚌𝚎 𝚍𝚎 𝚖𝚎𝚍𝚒𝚊𝚏𝚒𝚛𝚎*`
     }, { quoted: msg });
   }
 
-  // ⏳ reacción de "procesando"
   await conn.sendMessage(chatId, {
-    react: { text: "⏳", key: msg.key }
+    react: { text: "🎯", key: msg.key }
   });
 
   try {
@@ -43,7 +42,6 @@ const handler = async (msg, { conn, args, command }) => {
       fileName: fileInfo.title
     }, { quoted: msg });
 
-    // ✅ reacción de éxito
     await conn.sendMessage(chatId, {
       react: { text: "✅", key: msg.key }
     });
