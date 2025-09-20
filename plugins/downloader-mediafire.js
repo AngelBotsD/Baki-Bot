@@ -1,23 +1,71 @@
-import Scraper from "@SumiFX/Scraper"
+import fetch from "node-fetch";
 
-let handler = async (m, { conn, args, usedPrefix, command }) => {
-if (!args[0]) return m.reply('⚡ Ingresa el enlace del archivo de Mediafire junto al comando.\n\n`Ejemplo:`\n' + `> *${usedPrefix + command}* https://www.mediafire.com/file/433hbpsc95unywu/Oshi_no_Ko_01.mp4/file?dkey=jpivv6z5osa&r=1587`)
-if (!args[0].match(/mediafire/gi)) return m.reply('El enlace deve ser de un archivo de Mediafire.')
-try {
-let { title, ext, aploud, size, dl_url } = await Scraper.mediafire(args[0])
-if (size.includes('GB') || size.replace(' MB', '') > 300) { return await m.reply('El archivo pesa mas de 300 MB, se canceló la Descarga.')}
-let txt = `╭─⬣「 *Mediafire Download* 」⬣\n`
-    txt += `│  ≡◦ *⭐ Nombre ∙* ${title}\n`
-    txt += `│  ≡◦ *🪴 Subido ∙* ${aploud}\n`
-    txt += `│  ≡◦ *📚 MimeType ∙* ${ext}\n`
-    txt += `│  ≡◦ *⚖ Peso ∙* ${size}\n`
-    txt += `╰─⬣`
-await m.reply(txt)
-await conn.sendFile(m.chat, dl_url, title, null, m, null, { mimetype: ext, asDocument: true })
-} catch {
-}}
-handler.help = ['mediafire <url mf>']
-handler.tags = ['downloader']
-handler.command = ['mediafire', 'mdfire', 'mf']
-handler.limit = 500
-export default handler
+const handler = async (msg, { conn, args, command }) => {
+  const chatId = msg.key.remoteJid;
+  const text = args.join(" ");
+  const pref = global.prefixes?.[0] || ".";
+
+  if (!text) {
+    return conn.sendMessage(chatId, {
+      text: `⚠️ *Uso incorrecto del comando.*\n\n📌 *Ejemplo:* ${pref}${command} aguila blanca`
+    }, { quoted: msg });
+  }
+
+  await conn.sendMessage(chatId, {
+    react: { text: '⏳', key: msg.key }
+  });
+
+  try {
+    // 🔍 Buscar canción por texto
+    const apiUrl = `https://api.neoxr.eu/api/spotify-search?query=${encodeURIComponent(text)}&apikey=russellxz`;
+    const response = await fetch(apiUrl);
+    if (!response.ok) throw new Error(`API error: ${response.statusText}`);
+
+    const data = await response.json();
+    if (!data.status || !data.data || !data.data[0]) throw new Error("No se encontraron resultados.");
+
+    // Tomar el primer resultado
+    const song = data.data[0];
+
+    const caption =
+      `𖠁 *Título:* ${song.title}\n` +
+      `𖠁 *Artista:* ${song.artist.name}\n` +
+      `𖠁 *Duración:* ${song.duration}\n` +
+      `𖠁 *Enlace:* ${song.url}\n\n────────────\n🎧 _La Suki Bot_`;
+
+    // 📸 Miniatura con información
+    await conn.sendMessage(chatId, {
+      image: { url: song.thumbnail },
+      caption,
+      mimetype: "image/jpeg"
+    }, { quoted: msg });
+
+    // 🎵 Descargar audio
+    const audioRes = await fetch(song.url);
+    if (!audioRes.ok) throw new Error("No se pudo descargar el audio.");
+
+    const audioBuffer = await audioRes.buffer();
+    await conn.sendMessage(chatId, {
+      audio: audioBuffer,
+      mimetype: "audio/mpeg",
+      fileName: `${song.title}.mp3`
+    }, { quoted: msg });
+
+    await conn.sendMessage(chatId, {
+      react: { text: "✅", key: msg.key }
+    });
+
+  } catch (err) {
+    console.error("❌ Error en .spotify:", err);
+    await conn.sendMessage(chatId, {
+      text: `❌ *Error al buscar Spotify:*\n_${err.message}_`
+    }, { quoted: msg });
+
+    await conn.sendMessage(chatId, {
+      react: { text: "❌", key: msg.key }
+    });
+  }
+};
+
+handler.command = ["splay"];
+export default handler;
