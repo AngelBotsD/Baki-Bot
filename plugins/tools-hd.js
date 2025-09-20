@@ -67,6 +67,5 @@ const handler = async (msg, { conn, command }) => {
 handler.command = ['hd'];
 handler.help    = ['hd'];
 handler.tags    = ['tools'];
-handler.register= true;
 
 export default handler;
