@@ -31,7 +31,7 @@ const handler = async (msg, { conn, args, command }) => {
       `𖠁 *Título:* ${song.title}\n` +
       `𖠁 *Artista:* ${song.artist.name}\n` +
       `𖠁 *Duración:* ${song.duration}\n` +
-      `𖠁 *Enlace:* ${song.url}\n\n────────────\n🎧 _La Suki Bot_`;
+      `𖠁 *Enlace:* ${song.url}\n\n────────────\n🎧`;
 
     // 📸 Miniatura con información
     await conn.sendMessage(chatId, {
