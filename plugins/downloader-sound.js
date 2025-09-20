@@ -17,8 +17,9 @@ const handler = async (msg, { conn, args, command }) => {
     }, { quoted: msg });
   }
 
+  // ⏳ reacción de "procesando"
   await conn.sendMessage(chatId, {
-    react: { text: "🕒", key: msg.key }
+    react: { text: "⏳", key: msg.key }
   });
 
   try {
@@ -34,27 +35,21 @@ const handler = async (msg, { conn, args, command }) => {
     const fileResponse = await fetch(fileInfo.url);
     if (!fileResponse.ok) throw new Error("No se pudo descargar el archivo.");
 
-    const fileBuffer = await fileResponse.arrayBuffer();
-    const buffer = Buffer.from(fileBuffer);
-
-    await conn.sendMessage(chatId, { text: caption }, { quoted: msg });
+    const fileBuffer = Buffer.from(await fileResponse.arrayBuffer());
 
     await conn.sendMessage(chatId, {
-      document: buffer,
+      document: fileBuffer,
       mimetype: fileInfo.mime,
       fileName: fileInfo.title
     }, { quoted: msg });
 
+    // ✅ reacción de éxito
     await conn.sendMessage(chatId, {
       react: { text: "✅", key: msg.key }
     });
 
   } catch (err) {
     console.error("❌ Error en .mediafire:", err);
-    await conn.sendMessage(chatId, {
-      text: `❌ *Error al procesar MediaFire:*\n_${err.message}_`
-    }, { quoted: msg });
-
     await conn.sendMessage(chatId, {
       react: { text: "❌", key: msg.key }
     });
