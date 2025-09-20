@@ -50,33 +50,22 @@ const handler = async (msg, { conn, text }) => {
       { quoted: msg }
     );
 
-    const qualities = ["320kbps", "256kbps", "192kbps", "128kbps", "64kbps"];
-    let audioUrl = null;
-
-    for (let q of qualities) {
-      try {
-        const api = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=${q}&apikey=russellxz`;
-        const r = await axios.get(api);
-        if (r.data?.status && r.data.data?.url) {
-          audioUrl = r.data.data.url;
-          break;
-        }
-      } catch {}
-    }
-
-    if (!audioUrl) throw new Error("No se pudo obtener el audio");
+    const api = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`;
+    const r = await axios.get(api);
+    if (!r.data?.status || !r.data.data?.url) throw new Error("No se pudo obtener el audio");
 
     const tmp = path.join(process.cwd(), "tmp");
     if (!fs.existsSync(tmp)) fs.mkdirSync(tmp);
     const inFile = path.join(tmp, `${Date.now()}_in.m4a`);
     const outFile = path.join(tmp, `${Date.now()}_out.mp3`);
 
-    const dl = await axios.get(audioUrl, { responseType: "stream" });
+    const dl = await axios.get(r.data.data.url, { responseType: "stream" });
     await streamPipe(dl.data, fs.createWriteStream(inFile));
 
     await new Promise((res, rej) =>
       ffmpeg(inFile)
         .audioCodec("libmp3lame")
+        .audioBitrate("128k")
         .format("mp3")
         .save(outFile)
         .on("end", res)
@@ -112,6 +101,6 @@ const handler = async (msg, { conn, text }) => {
   }
 };
 
-handler.command = ["ytmp3"];
+handler.command = ["play"];
 
 export default handler;
