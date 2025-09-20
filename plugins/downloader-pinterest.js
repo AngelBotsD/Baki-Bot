@@ -11,7 +11,7 @@ const handler = async (msg, { conn, text }) => {
   if (!text || !/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//i.test(text)) {
     return conn.sendMessage(
       msg.key.remoteJid,
-      { text: `📎 *𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝚄𝚗 𝙻𝚒𝚗𝚔 𝚍𝚎 𝚈𝚘𝚞𝚝𝚞𝚋𝚎*` },
+      { text: `📎 *𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝚄𝚗 𝙻𝚒𝚗𝚔 𝚍𝚎 𝚈𝚘𝚞𝚝𝚞𝚋𝚎 𝚙𝚊𝚛𝚊 𝙳𝚎𝚜𝚌𝚊𝚛𝚐𝚊𝚛 𝚎𝚕 𝚅𝚒𝚍𝚎𝚘*` },
       { quoted: msg }
     )
   }
