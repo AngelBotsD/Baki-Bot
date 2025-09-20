@@ -33,10 +33,19 @@ const handler = async (m, { conn }) => {
 `
 
   await conn.sendMessage(m.chat, {
+    react: {
+      text: '🧾',
+      key: m.key
+    }
+  })
+
+  await conn.sendMessage(m.chat, {
     image: { url: "https://cdn.russellxz.click/33f7b6d5.jpeg" },
     caption: menu,
-    mentions: [m.sender]
+    mentions: [m.sender],
+    quoted: m
   })
 }
+
 handler.command = /^(menugrupo|menu2)$/i
 export default handler
