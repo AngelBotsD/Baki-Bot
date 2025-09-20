@@ -20,7 +20,7 @@ const handler = async (msg, { conn, text, usedPrefix, command }) => {
   }
 
   await conn.sendMessage(chatId, {
-    react: { text: '🕒', key: msg.key }
+    react: { text: '⏳', key: msg.key }
   });
 
   try {
@@ -68,7 +68,16 @@ const handler = async (msg, { conn, text, usedPrefix, command }) => {
       throw new Error('❌ El video descargado está vacío o incompleto.');
     }
 
-    const caption = ``;
+    const caption = `🎬 *𝑽𝒊𝒅𝒆𝒐 𝒅𝒆 𝒀𝒐𝒖𝑻𝒖𝒃𝒆 𝒅𝒆𝒔𝒄𝒂𝒓𝒈𝒂𝒅𝒐*\n\n` +
+      `𖠁 *Título:* ${videoData.title}\n` +
+      `𖠁 *Duración:* ${videoData.duration}\n` +
+      `𖠁 *Vistas:* ${videoData.views}\n` +
+      `𖠁 *Canal:* ${videoData.channel}\n` +
+      `𖠁 *Publicado:* ${videoData.publish}\n` +
+      `𖠁 *Tamaño:* ${videoData.size}\n` +
+      `𖠁 *Calidad:* ${videoData.quality}\n` +
+      `𖠁 *Link:* https://youtu.be/${videoData.id}\n\n` +
+      `𖠁 *¿No se reproduce?* Usa _${pref}ff_\n\n𖠁 *Procesado por La Suki Bot*`;
 
     await conn.sendMessage(chatId, {
       video: fs.readFileSync(filePath),
@@ -99,5 +108,6 @@ const handler = async (msg, { conn, text, usedPrefix, command }) => {
 handler.command = ['ytmp4'];
 handler.help = ['ytmp4 <enlace>'];
 handler.tags = ['descargas'];
+handler.register = true;
 
 export default handler;
