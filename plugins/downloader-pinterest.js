@@ -1,95 +1,117 @@
 import axios from "axios";
-import fs from "fs";
-import path from "path";
-import { pipeline } from "stream";
-import { promisify } from "util";
-import { fileURLToPath } from "url";
+import { PassThrough } from "stream";
+import ffmpeg from "fluent-ffmpeg";
 
-const streamPipeline = promisify(pipeline);
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const handler = async (msg, { conn, text, usedPrefix, command }) => {
+const handler = async (msg, { conn, text, args, usedPrefix, command }) => {
   const chatId = msg.key.remoteJid;
-  const args = text?.split(" ") || [];
-  let qualityArg, url;
+  const pref = global.prefixes?.[0] || usedPrefix || ".";
 
-  // Verificar si el primer argumento es calidad
-  if (args.length > 1 && /^\d+p$/.test(args[0])) {
-    qualityArg = args[0];
-    url = args[1];
-  } else {
-    url = args[0];
-  }
+  const isYoutubeUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)\//i.test(text);
 
-  if (!url || (!url.includes("youtube.com") && !url.includes("youtu.be"))) {
-    return conn.sendMessage(chatId, {
-      text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo:\n- *${usedPrefix}${command}* 720p https://youtube.com/watch?v=abc123\n- *${usedPrefix}${command}* https://youtube.com/watch?v=abc123 (automático)`
-    }, { quoted: msg });
+  if (!text || !isYoutubeUrl) {
+    return await conn.sendMessage(
+      chatId,
+      {
+        text: `✳️ *Uso correcto:*\n${pref}${command} <enlace de YouTube>\n\n📌 *Ejemplo:*\n*${pref}${command}* https://youtu.be/dQw4w9WgXcQ`,
+      },
+      { quoted: msg }
+    );
   }
 
   await conn.sendMessage(chatId, { react: { text: "⏳", key: msg.key } });
 
   try {
-    // Pedir info al API
-    const apiUrl = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(url)}&type=video&apikey=russellxz`;
-    const response = await axios.get(apiUrl);
-    if (!response.data?.status) throw new Error("No se pudo obtener la información del video");
+    const apiURL = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(
+      text
+    )}&type=audio&quality=128kbps&apikey=russellxz`;
+    const res = await axios.get(apiURL);
+    const json = res.data;
 
-    const formats = response.data.data; // contiene todas las calidades disponibles
-    if (!formats || formats.length === 0) throw new Error("No hay calidades disponibles");
+    if (!json.status || !json.data?.url) throw new Error("❌ No se pudo obtener el audio");
 
-    // Elegir calidad
-    let chosen = null;
-    if (qualityArg) {
-      chosen = formats.find(f => f.quality === qualityArg);
-      if (!chosen) throw new Error(`No se encontró la calidad *${qualityArg}* disponible.\nDisponibles: ${formats.map(f => f.quality).join(", ")}`);
-    } else {
-      // tomar la mejor (la primera suele ser la mayor calidad)
-      chosen = formats[0];
+    const { data, title, fduration, thumbnail } = json;
+    const sizeMB = parseFloat(data.size);
+
+    if (sizeMB > 99) {
+      return conn.sendMessage(
+        chatId,
+        {
+          text: `🚫 *Archivo demasiado pesado:*\n📦 Tamaño: ${sizeMB.toFixed(
+            2
+          )}MB\n\n🔒 *Solo se permiten descargas menores a 99MB.*`,
+        },
+        { quoted: msg }
+      );
     }
 
-    const tmpDir = path.join(__dirname, "../tmp");
-    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-    const filePath = path.join(tmpDir, `${Date.now()}_yt.mp4`);
+    await conn.sendMessage(
+      chatId,
+      {
+        image: { url: thumbnail },
+        caption: `🎵 *Título:* ${title}\n⏱️ *Duración:* ${fduration}\n📦 *Tamaño:* ${sizeMB.toFixed(
+          2
+        )}MB\n\n✨ *Procesando audio...*`,
+        mimetype: "image/jpeg",
+      },
+      { quoted: msg }
+    );
 
-    // Descargar
-    const dlRes = await axios.get(chosen.url, { responseType: "stream", headers: { "User-Agent": "Mozilla/5.0" } });
-    await streamPipeline(dlRes.data, fs.createWriteStream(filePath));
+    const response = await axios.get(data.url, { responseType: "stream" });
+    const buffers = [];
+    const passthrough = new PassThrough();
 
-    const stats = fs.statSync(filePath);
-    if (!stats || stats.size < 100000) {
-      fs.unlinkSync(filePath);
-      throw new Error("El video descargado está vacío o incompleto");
-    }
+    ffmpeg(response.data)
+      .audioCodec("libmp3lame")
+      .audioBitrate("128k")
+      .format("mp3")
+      .on("error", async (err) => {
+        console.error("❌ Error en ffmpeg:", err);
+        await conn.sendMessage(
+          chatId,
+          {
+            text: `❌ *Error al procesar el audio:* ${err.message}`,
+          },
+          { quoted: msg }
+        );
+      })
+      .on("end", async () => {
+        const finalBuffer = Buffer.concat(buffers);
 
-    const caption = `🎬 *YouTube Downloader* 🎬\n\n` +
-      `𖠁 *Título:* ${response.data.title}\n` +
-      `𖠁 *Duración:* ${response.data.fduration}\n` +
-      `𖠁 *Vistas:* ${response.data.views}\n` +
-      `𖠁 *Canal:* ${response.data.channel}\n` +
-      `𖠁 *Publicado:* ${response.data.publish}\n` +
-      `𖠁 *Tamaño:* ${chosen.size || "Desconocido"}\n` +
-      `𖠁 *Calidad:* ${chosen.quality}\n` +
-      `𖠁 *Link:* https://youtu.be/${response.data.id}\n\n` +
-      `⚠️ *¿No se reproduce?* Usa _${usedPrefix}ff_`;
+        await conn.sendMessage(
+          chatId,
+          {
+            audio: finalBuffer,
+            mimetype: "audio/mpeg",
+            fileName: `${title}.mp3`,
+          },
+          { quoted: msg }
+        );
+
+        await conn.sendMessage(chatId, {
+          react: { text: "✅", key: msg.key },
+        });
+      })
+      .pipe(passthrough);
+
+    passthrough.on("data", (chunk) => buffers.push(chunk));
+  } catch (err) {
+    console.error("❌ Error en .ytmp3:", err);
+    await conn.sendMessage(
+      chatId,
+      {
+        text: `❌ *Error inesperado:*\n_${err.message}_`,
+      },
+      { quoted: msg }
+    );
 
     await conn.sendMessage(chatId, {
-      video: fs.readFileSync(filePath),
-      mimetype: "video/mp4",
-      fileName: `${response.data.title}.mp4`,
-      caption
-    }, { quoted: msg });
-
-    fs.unlinkSync(filePath);
-    await conn.sendMessage(chatId, { react: { text: "✅", key: msg.key } });
-
-  } catch (err) {
-    console.error("❌ Error en ytmp4:", err.message);
-    await conn.sendMessage(chatId, { text: `❌ *Error:* ${err.message}` }, { quoted: msg });
-    await conn.sendMessage(chatId, { react: { text: "❌", key: msg.key } });
+      react: { text: "❌", key: msg.key },
+    });
   }
 };
 
-handler.command = ["ytmp4"];
+handler.command = ["ytmp3"];
+handler.help = ["ytmp3 <url>"];
+handler.tags = ["descargas"];
+
 export default handler;
