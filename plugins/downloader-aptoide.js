@@ -101,6 +101,6 @@ const handler = async (msg, { conn, text }) => {
   }
 };
 
-handler.command = ["play"];
+handler.command = ["ytmp3"];
 
 export default handler;
