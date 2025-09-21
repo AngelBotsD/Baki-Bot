@@ -11,7 +11,7 @@ const handler = async (msg, { conn, text }) => {
   if (!text || !text.trim()) {
     return conn.sendMessage(
       msg.key.remoteJid,
-      { text: `*🎬 𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝙴𝚕 𝙽𝚘𝚖𝚋𝚛𝚎 𝚍𝚎 𝙰𝚕𝚐𝚞𝚗 𝚅𝚒𝚍𝚎𝚘*` },
+      { text: `*🎬 Ingresa el nombre de algún video*` },
       { quoted: msg }
     )
   }
@@ -33,19 +33,12 @@ const handler = async (msg, { conn, text }) => {
   const { url: videoUrl, title, timestamp: duration, author } = video
   const artista = author.name
 
-  const caption = `
-> 𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁
-
-🎵 𝚃𝚒𝚝𝚞𝚕𝚘: ${title}
-🎤 𝙰𝚛𝚝𝚒𝚜𝚝𝚊: ${artista}
-🕑 𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗: ${duration}
-`.trim()
-
   const posibles = ["2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p"]
 
-  try {
-    let videoDownloadUrl = null
+  let videoDownloadUrl = null
+  let calidadElegida = "Desconocida"
 
+  try {
     // 🔍 Probar calidades de mayor a menor
     for (const q of posibles) {
       // ==== Primera API ====
@@ -55,6 +48,7 @@ const handler = async (msg, { conn, text }) => {
 
         if (r1.data?.status && r1.data?.result?.url) {
           videoDownloadUrl = r1.data.result.url
+          calidadElegida = q
           console.log(`✅ Calidad ${q} encontrada en la primera API`)
           break
         }
@@ -69,6 +63,7 @@ const handler = async (msg, { conn, text }) => {
 
         if (r2.data?.status && r2.data?.data?.url) {
           videoDownloadUrl = r2.data.data.url
+          calidadElegida = q
           console.log(`✅ Calidad ${q} encontrada en la segunda API`)
           break
         }
@@ -87,13 +82,23 @@ const handler = async (msg, { conn, text }) => {
     const dl = await axios.get(videoDownloadUrl, { responseType: "stream" })
     await streamPipe(dl.data, fs.createWriteStream(file))
 
+    // ====== Enviar con HD activado ======
     await conn.sendMessage(
       msg.key.remoteJid,
       {
         video: fs.readFileSync(file),
         mimetype: "video/mp4",
         fileName: `${title}.mp4`,
-        caption
+        caption: `
+> 🎬 *VIDEO DOWNLOADER*
+
+🎵 *Título:* ${title}
+🎤 *Artista:* ${artista}
+🕑 *Duración:* ${duration}
+📺 *Calidad:* ${calidadElegida} (HD)
+        `.trim(),
+        supportsStreaming: true,
+        contextInfo: { isHd: true } // <-- fuerza el envío en HD
       },
       { quoted: msg }
     )
