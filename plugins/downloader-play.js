@@ -39,9 +39,7 @@ const handler = async (msg, { conn, text }) => {
   let calidadElegida = "Desconocida"
 
   try {
-    // 🔍 Probar calidades de mayor a menor
     for (const q of posibles) {
-      // ==== Primera API ====
       try {
         const api1 = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&quality=${q}&apikey=may-0595dca2`
         const r1 = await axios.get(api1)
@@ -56,7 +54,6 @@ const handler = async (msg, { conn, text }) => {
         console.log(`❌ Primera API no tiene calidad ${q}`)
       }
 
-      // ==== Segunda API ====
       try {
         const api2 = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=russellxz`
         const r2 = await axios.get(api2)
@@ -74,7 +71,6 @@ const handler = async (msg, { conn, text }) => {
 
     if (!videoDownloadUrl) throw new Error("No se pudo obtener el video en ninguna calidad")
 
-    // ====== DESCARGA ======
     const tmp = path.join(process.cwd(), "tmp")
     if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
     const file = path.join(tmp, `${Date.now()}_vid.mp4`)
@@ -82,7 +78,6 @@ const handler = async (msg, { conn, text }) => {
     const dl = await axios.get(videoDownloadUrl, { responseType: "stream" })
     await streamPipe(dl.data, fs.createWriteStream(file))
 
-    // ====== Enviar con HD activado ======
     await conn.sendMessage(
       msg.key.remoteJid,
       {
@@ -98,7 +93,7 @@ const handler = async (msg, { conn, text }) => {
 📺 *Calidad:* ${calidadElegida} (HD)
         `.trim(),
         supportsStreaming: true,
-        contextInfo: { isHd: true } // <-- fuerza el envío en HD
+        contextInfo: { isHd: true }
       },
       { quoted: msg }
     )
