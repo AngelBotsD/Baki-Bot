@@ -37,16 +37,14 @@ const handler = async (msg, { conn, text }) => {
   let videoDownloadUrl = null
   let calidadElegida = "Desconocida"
   let apiUsada = "Desconocida"
+  let errorLogs = []
 
   try {
-    const tryApi = async (apiName, buildUrl, controller) => {
+    const tryApi = async (apiName, buildUrl) => {
       for (const q of posibles) {
         const apiUrl = buildUrl(q)
         try {
-          const r = await axios.get(apiUrl, {
-            timeout: 60000,
-            signal: controller.signal
-          })
+          const r = await axios.get(apiUrl, { timeout: 60000 })
           if (apiName === "MayAPI" && r.data?.status && r.data?.result?.url) {
             return {
               url: r.data.result.url,
@@ -61,23 +59,20 @@ const handler = async (msg, { conn, text }) => {
               api: "NeoxR"
             }
           }
-        } catch {
+        } catch (err) {
+          errorLogs.push(`${apiName} (${q}): ${err.message}`)
           continue
         }
       }
       throw new Error(`${apiName} no pudo obtener el video`)
     }
 
-    const controller1 = new AbortController()
-    const controller2 = new AbortController()
-
     const mayApiPromise = tryApi(
       "MayAPI",
       (q) =>
         `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(
           videoUrl
-        )}&type=mp4&quality=${q}&apikey=may-0595dca2`,
-      controller1
+        )}&type=mp4&quality=${q}&apikey=may-0595dca2`
     )
 
     const neoxApiPromise = tryApi(
@@ -85,16 +80,10 @@ const handler = async (msg, { conn, text }) => {
       (q) =>
         `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(
           videoUrl
-        )}&type=video&quality=${q}&apikey=russellxz`,
-      controller2
+        )}&type=video&quality=${q}&apikey=russellxz`
     )
 
-    // Carrera entre las dos APIs
-    const winner = await Promise.race([mayApiPromise, neoxApiPromise])
-
-    // Cancelamos la otra API
-    if (winner.api === "MayAPI") controller2.abort()
-    else controller1.abort()
+    const winner = await Promise.any([mayApiPromise, neoxApiPromise])
 
     videoDownloadUrl = winner.url
     calidadElegida = winner.quality
@@ -145,7 +134,11 @@ const handler = async (msg, { conn, text }) => {
     console.error(e)
     await conn.sendMessage(
       msg.key.remoteJid,
-      { text: `⚠️ Error al descargar el video:\n\n${e.message}` },
+      {
+        text: `⚠️ Error al descargar el video:\n\n${e.message}\n\n*Logs:*\n${errorLogs.join(
+          "\n"
+        )}`
+      },
       { quoted: msg }
     )
   }
