@@ -1,4 +1,5 @@
 import axios from "axios"
+import yts from "yt-search"
 import fs from "fs"
 import path from "path"
 import { promisify } from "util"
@@ -29,13 +30,24 @@ const handler = async (msg, { conn, text }) => {
   })
 
   const videoUrl = text.trim()
-
   let videoDownloadUrl = null
   let calidadElegida = "Desconocida"
   let apiUsada = "Desconocida"
   let errorLogs = []
+  let title = "Desconocido"
+  let duration = "Desconocida"
+  let artista = "Desconocido"
 
   try {
+    // Obtener info del video usando yts
+    const res = await yts(videoUrl)
+    const video = res.videos[0]
+    if (video) {
+      title = video.title
+      duration = video.timestamp
+      artista = video.author.name
+    }
+
     const tryApi = (apiName, urlBuilder) => {
       return new Promise(async (resolve, reject) => {
         const controller = new AbortController()
@@ -116,12 +128,15 @@ const handler = async (msg, { conn, text }) => {
       {
         video: fs.readFileSync(file),
         mimetype: "video/mp4",
-        fileName: `${Date.now()}_video.mp4`,
+        fileName: `${title}.mp4`,
         caption: `
 > *𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
-📺 *Calidad:* ${calidadElegida}
-🌐 *Api:* ${apiUsada}
+🎵 *𝚃í𝚝𝚞𝚕𝚘:* ${title}
+🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
+🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
+📺 *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
+🌐 *𝙰𝚙𝚒:* ${apiUsada}
 `.trim(),
         supportsStreaming: true,
         contextInfo: { isHd: true }
