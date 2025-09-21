@@ -34,17 +34,16 @@ const handler = async (msg, { conn, text }) => {
   const artista = author.name
 
   let videoDownloadUrl = null
-  let calidadElegida = "Automática"
+  let calidadElegida = "Desconocida"
   let apiUsada = "MayAPI"
 
   try {
-    // 👉 pedir automático, sin forzar calidad
     const api1 = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&apikey=may-0595dca2`
     const r1 = await axios.get(api1, { timeout: 60000 })
 
     if (r1.data?.status && r1.data?.result?.url) {
       videoDownloadUrl = r1.data.result.url
-      calidadElegida = r1.data.result.quality || "Automática"
+      calidadElegida = r1.data.result.quality || "Desconocida"
     }
 
     if (!videoDownloadUrl) {
