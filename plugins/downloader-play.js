@@ -33,65 +33,66 @@ const handler = async (msg, { conn, text }) => {
   const { url: videoUrl, title, timestamp: duration, author } = video
   const artista = author.name
 
-  const posibles = ["2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p"]
+  const posibles = ["1080p", "720p", "480p", "360p", "240p", "144p"]
 
   let videoDownloadUrl = null
   let calidadElegida = "Desconocida"
 
   try {
-    // 🔹 Primero Neoxr
     for (const q of posibles) {
+      let found = false
+
       try {
         const api2 = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=russellxz`
         const r2 = await axios.get(api2)
-
         if (r2.data?.status && r2.data?.data?.url) {
           videoDownloadUrl = r2.data.data.url
-          calidadElegida = q
-          console.log(`✅ Calidad ${q} encontrada en Neoxr`)
-          break
+          calidadElegida = r2.data.data.quality || q
+          console.log(`✅ Calidad ${calidadElegida} encontrada en Neoxr`)
+          found = true
         }
       } catch (err) {
-        console.log(`❌ Neoxr no tiene calidad ${q}`)
+        console.log(`❌ Neoxr no tiene calidad ${q} → ${err.message}`)
       }
-    }
 
-    // 🔹 Luego Mayapi
-    if (!videoDownloadUrl) {
-      for (const q of posibles) {
-        try {
-          const api1 = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&quality=${q}&apikey=may-0595dca2`
-          const r1 = await axios.get(api1)
-
-          if (r1.data?.status && r1.data?.result?.url) {
-            videoDownloadUrl = r1.data.result.url
-            calidadElegida = q
-            console.log(`✅ Calidad ${q} encontrada en Mayapi`)
-            break
-          }
-        } catch (err) {
-          console.log(`❌ Mayapi no tiene calidad ${q}`)
+      try {
+        const api1 = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&quality=${q}&apikey=may-0595dca2`
+        const r1 = await axios.get(api1)
+        if (r1.data?.status && r1.data?.result?.url) {
+          videoDownloadUrl = r1.data.result.url
+          calidadElegida = r1.data.result.quality || q
+          console.log(`✅ Calidad ${calidadElegida} encontrada en Mayapi`)
+          found = true
         }
+      } catch (err) {
+        console.log(`❌ Mayapi no tiene calidad ${q} → ${err.message}`)
       }
+
+      if (found) break
     }
 
-    // 🔹 Si aún no hay link, buscar cualquier calidad disponible (fallback)
     if (!videoDownloadUrl) {
       try {
         const r2 = await axios.get(`https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&apikey=russellxz`)
         if (r2.data?.status && r2.data?.data?.url) {
           videoDownloadUrl = r2.data.data.url
-          calidadElegida = r2.data.data.quality || "Automática"
-          console.log(`⚡ Video conseguido en Neoxr con calidad automática`)
+          calidadElegida = r2.data.data.quality || "Desconocida"
+          console.log(`⚡ Fallback Neoxr con calidad ${calidadElegida}`)
         }
-      } catch {}
+      } catch (err) {
+        console.log("⚠️ Fallback Neoxr falló →", err.message)
+      }
 
       if (!videoDownloadUrl) {
-        const r1 = await axios.get(`https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&apikey=may-0595dca2`)
-        if (r1.data?.status && r1.data?.result?.url) {
-          videoDownloadUrl = r1.data.result.url
-          calidadElegida = r1.data.result.quality || "Automática"
-          console.log(`⚡ Video conseguido en Mayapi con calidad automática`)
+        try {
+          const r1 = await axios.get(`https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&apikey=may-0595dca2`)
+          if (r1.data?.status && r1.data?.result?.url) {
+            videoDownloadUrl = r1.data.result.url
+            calidadElegida = r1.data.result.quality || "Desconocida"
+            console.log(`⚡ Fallback Mayapi con calidad ${calidadElegida}`)
+          }
+        } catch (err) {
+          console.log("⚠️ Fallback Mayapi falló →", err.message)
         }
       }
     }
@@ -131,10 +132,10 @@ const handler = async (msg, { conn, text }) => {
       react: { text: "✅", key: msg.key }
     })
   } catch (e) {
-    console.error(e)
+    console.error("❌ ERROR DETALLADO:", e)
     await conn.sendMessage(
       msg.key.remoteJid,
-      { text: "⚠️ Error al descargar el video." },
+      { text: `⚠️ Error al descargar el video:\n\n${e.message || e}` },
       { quoted: msg }
     )
   }
