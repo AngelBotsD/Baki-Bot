@@ -11,7 +11,7 @@ const handler = async (msg, { conn, text }) => {
   if (!text || !text.trim()) {
     return conn.sendMessage(
       msg.key.remoteJid,
-      { text: `*🎬 Ingresa el nombre de algún video*` },
+      { text: "*🎬 Ingresa el nombre de algún video*" },
       { quoted: msg }
     )
   }
@@ -33,28 +33,23 @@ const handler = async (msg, { conn, text }) => {
   const { url: videoUrl, title, timestamp: duration, author } = video
   const artista = author.name
 
-  const posibles = ["1080p", "720p", "480p", "360p"]
-
   let videoDownloadUrl = null
   let calidadElegida = "Desconocida"
   let apiUsada = "Desconocida"
   let errorLogs = []
 
   try {
-    for (const q of posibles) {
-      try {
-        const api1 = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&quality=${q}&apikey=may-0595dca2`
-        const r1 = await axios.get(api1, { timeout: 60000 })
+    try {
+      const api1 = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&apikey=may-0595dca2`
+      const r1 = await axios.get(api1, { timeout: 60000 })
 
-        if (r1.data?.status && r1.data?.result?.url) {
-          videoDownloadUrl = r1.data.result.url
-          calidadElegida = r1.data.result.quality || q
-          apiUsada = "MayAPI"
-          break
-        }
-      } catch (err) {
-        errorLogs.push(`MayAPI (${q}): ${err.message}`)
+      if (r1.data?.status && r1.data?.result?.url) {
+        videoDownloadUrl = r1.data.result.url
+        calidadElegida = r1.data.result.quality || "Automática"
+        apiUsada = "MayAPI"
       }
+    } catch (err) {
+      errorLogs.push(`MayAPI: ${err.message}`)
     }
 
     if (!videoDownloadUrl) {
@@ -78,14 +73,15 @@ const handler = async (msg, { conn, text }) => {
         mimetype: "video/mp4",
         fileName: `${title}.mp4`,
         caption: `
-> *𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
-🎵 *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
-🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
-🕑 *𝙳𝚞𝚛𝚊𝚌𝚒𝚘́𝚗:* ${duration}
-📺 *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
-🌐 *𝙰𝚙𝚒:* ${apiUsada}
-        `.trim(),
+> 𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁
+
+🎵 𝚃𝚒́𝚝𝚞𝚕𝚘: ${title}
+🎤 𝙰𝚛𝚝𝚒𝚜𝚝𝚊: ${artista}
+🕑 𝙳𝚞𝚛𝚊𝚌𝚒𝚘́𝚗: ${duration}
+📺 𝙲𝚊𝚕𝚒𝚍𝚊𝚍: ${calidadElegida}
+🌐 𝙰𝚙𝚒: ${apiUsada}
+`.trim(),
         supportsStreaming: true,
         contextInfo: { isHd: true }
       },
@@ -97,6 +93,7 @@ const handler = async (msg, { conn, text }) => {
     await conn.sendMessage(msg.key.remoteJid, {
       react: { text: "✅", key: msg.key }
     })
+
   } catch (e) {
     console.error(e)
     await conn.sendMessage(
