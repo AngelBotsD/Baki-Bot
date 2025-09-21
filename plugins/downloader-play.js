@@ -54,6 +54,12 @@ if (r1.data?.status && r1.data?.result?.url) {
     }  
   } catch (err) {  
     errorLogs.push(`MayAPI (${q}): ${err.message}`)  
+    // aviso al usuario
+    await conn.sendMessage(
+      msg.key.remoteJid,
+      { text: "⚠️ *No se pudo con la primera api...*\n\n🔁 *Intentando con la segunda api...*" },
+      { quoted: msg }
+    )
   }  
 
   try {  
