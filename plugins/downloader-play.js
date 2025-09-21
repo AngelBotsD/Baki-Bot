@@ -49,7 +49,7 @@ try {
 
 const downloadVideo = async (conn, m, url, title, artist, duration) => {
 try {  
-    const apiUrl = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(url)}&type=mp4&apikey=soymaycol<3`;  
+    const apiUrl = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(url)}&type=mp4&apikey=may-0595dca2`;  
     const response = await fetch(apiUrl);
     const data = await response.json();
 
