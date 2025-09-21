@@ -33,77 +33,56 @@ msg.key.remoteJid,
 const { url: videoUrl, title, timestamp: duration, author } = video
 const artista = author.name
 
-const posibles = ["1080p", "720p", "480p", "360p", "240p", "144p"]
+const posibles = ["1080p", "720p", "480p", "360p"]
 
 let videoDownloadUrl = null
 let calidadElegida = "Desconocida"
+let apiUsada = "Desconocida"
+let errorLogs = []
 
 try {
 for (const q of posibles) {
-let found = false
+try {
+const api1 = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&quality=${q}&apikey=may-0595dca2`
+const r1 = await axios.get(api1, { timeout: 60000 })
+
+if (r1.data?.status && r1.data?.result?.url) {  
+      videoDownloadUrl = r1.data.result.url  
+      calidadElegida = r1.data.result.quality || q  
+      apiUsada = "MayAPI"  
+      break  
+    }  
+  } catch (err) {  
+    errorLogs.push(`MayAPI (${q}): ${err.message}`)  
+  }  
 
   try {  
     const api2 = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=russellxz`  
-    const r2 = await axios.get(api2)  
+    const r2 = await axios.get(api2, { timeout: 60000 })  
+
     if (r2.data?.status && r2.data?.data?.url) {  
       videoDownloadUrl = r2.data.data.url  
       calidadElegida = r2.data.data.quality || q  
-      console.log(`✅ Calidad ${calidadElegida} encontrada en Neoxr`)  
-      found = true  
+      apiUsada = "NeoxR"  
+      break  
     }  
   } catch (err) {  
-    console.log(`❌ Neoxr no tiene calidad ${q} → ${err.message}`)  
+    errorLogs.push(`NeoxR (${q}): ${err.message}`)  
   }  
-
-  try {  
-    const api1 = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&quality=${q}&apikey=may-0595dca2`  
-    const r1 = await axios.get(api1)  
-    if (r1.data?.status && r1.data?.result?.url) {  
-      videoDownloadUrl = r1.data.result.url  
-      calidadElegida = r1.data.result.quality || q  
-      console.log(`✅ Calidad ${calidadElegida} encontrada en Mayapi`)  
-      found = true  
-    }  
-  } catch (err) {  
-    console.log(`❌ Mayapi no tiene calidad ${q} → ${err.message}`)  
-  }  
-
-  if (found) break  
 }  
 
 if (!videoDownloadUrl) {  
-  try {  
-    const r2 = await axios.get(`https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&apikey=russellxz`)  
-    if (r2.data?.status && r2.data?.data?.url) {  
-      videoDownloadUrl = r2.data.data.url  
-      calidadElegida = r2.data.data.quality || "Desconocida"  
-      console.log(`⚡ Fallback Neoxr con calidad ${calidadElegida}`)  
-    }  
-  } catch (err) {  
-    console.log("⚠️ Fallback Neoxr falló →", err.message)  
-  }  
-
-  if (!videoDownloadUrl) {  
-    try {  
-      const r1 = await axios.get(`https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&apikey=may-0595dca2`)  
-      if (r1.data?.status && r1.data?.result?.url) {  
-        videoDownloadUrl = r1.data.result.url  
-        calidadElegida = r1.data.result.quality || "Desconocida"  
-        console.log(`⚡ Fallback Mayapi con calidad ${calidadElegida}`)  
-      }  
-    } catch (err) {  
-      console.log("⚠️ Fallback Mayapi falló →", err.message)  
-    }  
-  }  
+  throw new Error(  
+    "No se pudo obtener el video en ninguna calidad.\n\nLogs:\n" +  
+    errorLogs.join("\n")  
+  )  
 }  
-
-if (!videoDownloadUrl) throw new Error("No se pudo obtener el video en ninguna calidad")  
 
 const tmp = path.join(process.cwd(), "tmp")  
 if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)  
 const file = path.join(tmp, `${Date.now()}_vid.mp4`)  
 
-const dl = await axios.get(videoDownloadUrl, { responseType: "stream" })  
+const dl = await axios.get(videoDownloadUrl, { responseType: "stream", timeout: 0 })  
 await streamPipe(dl.data, fs.createWriteStream(file))  
 
 await conn.sendMessage(  
@@ -113,12 +92,16 @@ await conn.sendMessage(
     mimetype: "video/mp4",  
     fileName: `${title}.mp4`,  
     caption: `
-> 🎬 VIDEO DOWNLOADER
 
-🎵 Título: ${title}
-🎤 Artista: ${artista}
-🕑 Duración: ${duration}
-📺 Calidad: ${calidadElegida}
+> 𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁
+
+
+
+🎵 𝚃𝚒́𝚝𝚞𝚕𝚘: ${title}
+🎤 𝙰𝚛𝚝𝚒𝚜𝚝𝚊: ${artista}
+🕑 𝙳𝚞𝚛𝚊𝚌𝚒𝚘́𝚗: ${duration}
+📺 𝙲𝚊𝚕𝚒𝚍𝚊𝚍: ${calidadElegida}
+🌐 𝙰𝚙𝚒: ${apiUsada}
 `.trim(),
 supportsStreaming: true,
 contextInfo: { isHd: true }
@@ -133,10 +116,10 @@ await conn.sendMessage(msg.key.remoteJid, {
 })
 
 } catch (e) {
-console.error("❌ ERROR DETALLADO:", e)
+console.error(e)
 await conn.sendMessage(
 msg.key.remoteJid,
-{ text: `⚠️ Error al descargar el video:\n\n${e.message || e}` },
+{ text: `⚠️ Error al descargar el video:\n\n${e.message}` },
 { quoted: msg }
 )
 }
