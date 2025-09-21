@@ -34,29 +34,21 @@ const handler = async (msg, { conn, text }) => {
   const artista = author.name
 
   let videoDownloadUrl = null
-  let calidadElegida = "Desconocida"
-  let apiUsada = "Desconocida"
-  let errorLogs = []
+  let calidadElegida = "Automática"
+  let apiUsada = "MayAPI"
 
   try {
-    try {
-      const api1 = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&apikey=may-0595dca2`
-      const r1 = await axios.get(api1, { timeout: 60000 })
+    // 👉 pedir automático, sin forzar calidad
+    const api1 = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&apikey=may-0595dca2`
+    const r1 = await axios.get(api1, { timeout: 60000 })
 
-      if (r1.data?.status && r1.data?.result?.url) {
-        videoDownloadUrl = r1.data.result.url
-        calidadElegida = r1.data.result.quality || "Automática"
-        apiUsada = "MayAPI"
-      }
-    } catch (err) {
-      errorLogs.push(`MayAPI: ${err.message}`)
+    if (r1.data?.status && r1.data?.result?.url) {
+      videoDownloadUrl = r1.data.result.url
+      calidadElegida = r1.data.result.quality || "Automática"
     }
 
     if (!videoDownloadUrl) {
-      throw new Error(
-        "No se pudo obtener el video en ninguna calidad.\n\nLogs:\n" +
-        errorLogs.join("\n")
-      )
+      throw new Error("MayAPI no devolvió ninguna URL de descarga.")
     }
 
     const tmp = path.join(process.cwd(), "tmp")
