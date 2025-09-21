@@ -33,44 +33,41 @@ const handler = async (msg, { conn, text }) => {
   const { url: videoUrl, title, timestamp: duration, author } = video
   const artista = author.name
 
-  const posibles = ["2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p"]
-
   let videoDownloadUrl = null
   let calidadElegida = "Desconocida"
 
   try {
-    for (const q of posibles) {
-      try {
-        const api1 = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&quality=${q}&apikey=may-0595dca2`
-        const r1 = await axios.get(api1)
+    // ====== PRIMERA API ======
+    try {
+      const api1 = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&apikey=may-0595dca2`
+      const r1 = await axios.get(api1)
 
-        if (r1.data?.status && r1.data?.result?.url) {
-          videoDownloadUrl = r1.data.result.url
-          calidadElegida = q
-          console.log(`✅ Calidad ${q} encontrada en la primera API`)
-          break
-        }
-      } catch (err) {
-        console.log(`❌ Primera API no tiene calidad ${q}`)
+      if (r1.data?.status && r1.data?.result?.url) {
+        videoDownloadUrl = r1.data.result.url
+        calidadElegida = r1.data.result.quality || "Automática"
       }
+    } catch (err) {
+      console.log("❌ Primera API falló:", err.message)
+    }
 
+    // ====== SEGUNDA API (si la primera no dio) ======
+    if (!videoDownloadUrl) {
       try {
-        const api2 = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=russellxz`
+        const api2 = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&apikey=russellxz`
         const r2 = await axios.get(api2)
 
         if (r2.data?.status && r2.data?.data?.url) {
           videoDownloadUrl = r2.data.data.url
-          calidadElegida = q
-          console.log(`✅ Calidad ${q} encontrada en la segunda API`)
-          break
+          calidadElegida = r2.data.data.quality || "Automática"
         }
       } catch (err) {
-        console.log(`❌ Segunda API no tiene calidad ${q}`)
+        console.log("❌ Segunda API falló:", err.message)
       }
     }
 
-    if (!videoDownloadUrl) throw new Error("No se pudo obtener el video en ninguna calidad")
+    if (!videoDownloadUrl) throw new Error("No se pudo obtener el video en ninguna API")
 
+    // ====== DESCARGA ======
     const tmp = path.join(process.cwd(), "tmp")
     if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
     const file = path.join(tmp, `${Date.now()}_vid.mp4`)
@@ -85,13 +82,13 @@ const handler = async (msg, { conn, text }) => {
         mimetype: "video/mp4",
         fileName: `${title}.mp4`,
         caption: `
-> *𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝙰𝚆𝙻𝙾𝙰𝙳𝙴𝚁*
+> 🎬 *VIDEO DOWNLOADER*
 
-🎵 *𝚃𝙸𝚃𝚄𝙻𝙾:* ${title}
-🎤 *𝙰𝚁𝚃𝙸𝚂𝚃𝙰:* ${artista}
-🕑 *𝙳𝚄𝚁𝙰𝙲𝙸𝙾𝙽:* ${duration}
-📺 *𝙲𝙰𝙻𝙸𝙳𝙰𝙳:* ${calidadElegida}
-`.trim(),
+🎵 *Título:* ${title}
+🎤 *Artista:* ${artista}
+🕑 *Duración:* ${duration}
+📺 *Calidad:* ${calidadElegida}
+        `.trim(),
         supportsStreaming: true,
         contextInfo: { isHd: true }
       },
