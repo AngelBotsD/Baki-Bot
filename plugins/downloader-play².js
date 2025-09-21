@@ -51,7 +51,7 @@ const handler = async (msg, { conn, text }) => {
       { quoted: msg }
     );
 
-    const api = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&mp3=video&quality=${q}&apikey=may-0595dca2`;
+    const api = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(audioUrl)}&mp3=video&quality=${q}&apikey=may-0595dca2`;
     const r = await axios.get(api);
     if (!r.data?.status || !r.data.data?.url) throw new Error("No se pudo obtener el audio");
 
