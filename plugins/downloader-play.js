@@ -11,7 +11,7 @@ const handler = async (msg, { conn, text }) => {
   if (!text || !text.trim()) {
     return conn.sendMessage(
       msg.key.remoteJid,
-      { text: `*🎬 Ingresa el nombre de algún video*` },
+      { text: "*🎬 Ingresa el nombre de algún video*" },
       { quoted: msg }
     )
   }
@@ -55,12 +55,26 @@ const handler = async (msg, { conn, text }) => {
       } catch (err) {
         errorLogs.push(`MayAPI (${q}): ${err.message}`)
       }
+
+      try {
+        const api2 = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=russellxz`
+        const r2 = await axios.get(api2, { timeout: 60000 })
+
+        if (r2.data?.status && r2.data?.data?.url) {
+          videoDownloadUrl = r2.data.data.url
+          calidadElegida = r2.data.data.quality || q
+          apiUsada = "NeoxR"
+          break
+        }
+      } catch (err) {
+        errorLogs.push(`NeoxR (${q}): ${err.message}`)
+      }
     }
 
     if (!videoDownloadUrl) {
       throw new Error(
         "No se pudo obtener el video en ninguna calidad.\n\nLogs:\n" +
-          errorLogs.join("\n")
+        errorLogs.join("\n")
       )
     }
 
@@ -78,13 +92,14 @@ const handler = async (msg, { conn, text }) => {
         mimetype: "video/mp4",
         fileName: `${title}.mp4`,
         caption: `
-> *𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
-🎵 *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
-🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
-🕑 *𝙳𝚞𝚛𝚊𝚌𝚒𝚘́𝚗:* ${duration}
-📺 *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
-🌐 *𝙰𝚙𝚒:* ${apiUsada}
+> 𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁
+
+🎵 𝚃𝚒́𝚝𝚞𝚕𝚘: ${title}
+🎤 𝙰𝚛𝚝𝚒𝚜𝚝𝚊: ${artista}
+🕑 𝙳𝚞𝚛𝚊𝚌𝚒𝚘́𝚗: ${duration}
+📺 𝙲𝚊𝚕𝚒𝚍𝚊𝚍: ${calidadElegida}
+🌐 𝙰𝚙𝚒: ${apiUsada}
 `.trim(),
         supportsStreaming: true,
         contextInfo: { isHd: true }
