@@ -1,11 +1,5 @@
 import axios from "axios"
 import yts from "yt-search"
-import fs from "fs"
-import path from "path"
-import { promisify } from "util"
-import { pipeline } from "stream"
-
-const streamPipe = promisify(pipeline)
 
 const handler = async (msg, { conn, text }) => {
   if (!text || !text.trim()) {
@@ -50,17 +44,13 @@ const handler = async (msg, { conn, text }) => {
       throw new Error("MayAPI no devolvió ninguna URL de descarga.")
     }
 
-    const tmp = path.join(process.cwd(), "tmp")
-    if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
-    const file = path.join(tmp, `${Date.now()}_vid.mp4`)
-
+    // 👉 Descarga directa en stream sin escribir en disco
     const dl = await axios.get(videoDownloadUrl, { responseType: "stream", timeout: 0 })
-    await streamPipe(dl.data, fs.createWriteStream(file))
 
     await conn.sendMessage(
       msg.key.remoteJid,
       {
-        video: fs.readFileSync(file),
+        video: dl.data,
         mimetype: "video/mp4",
         fileName: `${title}.mp4`,
         caption: `
@@ -78,8 +68,6 @@ const handler = async (msg, { conn, text }) => {
       },
       { quoted: msg }
     )
-
-    fs.unlinkSync(file)
 
     await conn.sendMessage(msg.key.remoteJid, {
       react: { text: "✅", key: msg.key }
