@@ -43,7 +43,7 @@ const handler = async (msg, { conn, text }) => {
     for (let q of posibles) {
       try {
         const r = await axios.get(
-           `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(url)}&type=mp4&apikey=may-0595dca2`;
+          `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=may-0595dca2`
         )
         if (r.data?.status && r.data.data?.url) {
           url = r.data.data.url
