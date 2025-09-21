@@ -92,13 +92,13 @@ const handler = async (msg, { conn, text }) => {
         mimetype: "video/mp4",
         fileName: `${title}.mp4`,
         caption: `
-> 🎬 *VIDEO DOWNLOADER*
+> *𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
-🎵 *Título:* ${title}
-🎤 *Artista:* ${artista}
-🕑 *Duración:* ${duration}
-📺 *Calidad:* ${calidadElegida}
-🌐 *API:* ${apiUsada}
+🎵 *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
+🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
+🕑 *𝙳𝚞𝚛𝚊𝚌𝚒𝚘́𝚗:* ${duration}
+📺 *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
+🌐 *𝙰𝚙𝚒:* ${apiUsada}
         `.trim(),
         supportsStreaming: true,
         contextInfo: { isHd: true }
