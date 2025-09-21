@@ -1,123 +1,107 @@
-// Codigo de SoyMaycol y no quites creditos
+import axios from "axios";
 import yts from "yt-search";
-import fetch from "node-fetch";
-import { spawn } from "child_process";
 import fs from "fs";
-import ffmpeg from "ffmpeg-static";
+import path from "path";
+import ffmpeg from "fluent-ffmpeg";
+import { promisify } from "util";
+import { pipeline } from "stream";
 
-// 🔥 Función para convertir a Opus
-async function convertToOpus(inputBuffer) {
-  return new Promise((resolve, reject) => {
-    const tmpIn = "./tmp_in.mp3";
-    const tmpOut = "./tmp_out.opus";
-    fs.writeFileSync(tmpIn, inputBuffer);
+const streamPipe = promisify(pipeline);
 
-    const ff = spawn(ffmpeg, [
-      "-y",
-      "-i", tmpIn,
-      "-c:a", "libopus",
-      "-b:a", "128k",
-      tmpOut,
-    ]);
+const handler = async (msg, { conn, text }) => {
+  const pref = global.prefixes?.[0] || ".";
 
-    ff.on("close", () => {
-      try {
-        const output = fs.readFileSync(tmpOut);
-        fs.unlinkSync(tmpIn);
-        fs.unlinkSync(tmpOut);
-        resolve(output);
-      } catch (err) {
-        reject(err);
-      }
-    });
+  if (!text || !text.trim()) {
+    return conn.sendMessage(
+      msg.key.remoteJid,
+      { text: `*💽 𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝙴𝚕 𝙽𝚘𝚖𝚋𝚛𝚎 𝚍𝚎 𝚊𝚕𝚐𝚞𝚗𝚊 𝙲𝚊𝚗𝚌𝚒𝚘𝚗*` },
+      { quoted: msg }
+    );
+  }
 
-    ff.on("error", (err) => reject(err));
+  await conn.sendMessage(msg.key.remoteJid, {
+    react: { text: "🕒", key: msg.key }
   });
-}
 
-const handler = async (m, { conn, text }) => {
-  if (!text) return m.reply(`╭─❍「 ✦ MaycolPlus ✦ 」
-│
-├─ Ay bebé, necesito algo para trabajar~
-├─ Dame el nombre de un video o URL de YouTube
-╰─✦`);
+  const res = await yts(text);
+  const video = res.videos[0];
+  if (!video) {
+    return conn.sendMessage(
+      msg.key.remoteJid,
+      { text: "❌ Sin resultados." },
+      { quoted: msg }
+    );
+  }
 
-  await m.react("🔥");
+  const { url: videoUrl, title, timestamp: duration, author, thumbnail } = video;
+  const artista = author.name;
 
   try {
-    const res = await yts(text);
-    if (!res || !res.videos || res.videos.length === 0) {
-      return m.reply(`╭─❍「 ✦ MaycolPlus ✦ 」
-│
-├─ Mmm... no encontré nada así bebé
-├─ Intenta con algo más específico~
-╰─✦`);
-    }
+    const infoMsg = `
+> *𝚈𝙾𝚄𝚃𝚄𝙱𝙴 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
-    const video = res.videos[0];
-    const title = video.title || "Sin título";
-    const url = video.url || "";
-    const thumbnail = video.thumbnail || "";
-
-    // mensaje inicial
-    const initialMessage = `╭─❍「 ✦ MaycolPlus ✦ 」
-│
-├─ Ooh~ encontré algo delicioso:
-├─ 「❀」${title}
-│
-├─ Déjame trabajar mi magia... ♡
-╰─✦`;
+🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${title}
+🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
+🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
+`.trim();
 
     await conn.sendMessage(
-      m.chat,
-      { image: { url: thumbnail }, caption: initialMessage },
-      { quoted: m }
+      msg.key.remoteJid,
+      { image: { url: thumbnail }, caption: infoMsg },
+      { quoted: msg }
     );
 
-    // 🔥 Llamada a la API
-    const apiUrl = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(
-      url
-    )}&type=mp3&apikey=soymaycol<3`;
-    const response = await fetch(apiUrl);
-    const data = await response.json();
+    const api = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`;
+    const r = await axios.get(api);
+    if (!r.data?.status || !r.data.data?.url) throw new Error("No se pudo obtener el audio");
 
-    if (!data || !data.status || !data.result || !data.result.url) {
-      throw new Error("No pude conseguir lo que querías bebé");
-    }
+    const tmp = path.join(process.cwd(), "tmp");
+    if (!fs.existsSync(tmp)) fs.mkdirSync(tmp);
+    const inFile = path.join(tmp, `${Date.now()}_in.m4a`);
+    const outFile = path.join(tmp, `${Date.now()}_out.mp3`);
 
-    // 🔥 Descargar el audio
-    const audioBuffer = await fetch(data.result.url).then((res) => res.buffer());
+    const dl = await axios.get(r.data.data.url, { responseType: "stream" });
+    await streamPipe(dl.data, fs.createWriteStream(inFile));
 
-    // 🔄 Convertir a OGG/Opus
-    const opusBuffer = await convertToOpus(audioBuffer);
+    await new Promise((res, rej) =>
+      ffmpeg(inFile)
+        .audioCodec("libmp3lame")
+        .audioBitrate("128k")
+        .format("mp3")
+        .save(outFile)
+        .on("end", res)
+        .on("error", rej)
+    );
 
-    // ✅ Mandar como nota de voz (ptt)
+    const buffer = fs.readFileSync(outFile);
+
     await conn.sendMessage(
-      m.chat,
+      msg.key.remoteJid,
       {
-        audio: opusBuffer,
-        mimetype: "audio/ogg; codecs=opus",
-        ptt: true   // 🔥 ya sin fileName
+        audio: buffer,
+        mimetype: "audio/mpeg",
+        fileName: `${title}.mp3`,
+        ptt: false
       },
-      { quoted: m }
+      { quoted: msg }
     );
 
-    await m.react("💋");
+    fs.unlinkSync(inFile);
+    fs.unlinkSync(outFile);
+
+    await conn.sendMessage(msg.key.remoteJid, {
+      react: { text: "✅", key: msg.key }
+    });
   } catch (e) {
-    console.error("Error en .play:", e);
-    await m.reply(
-      `╭─❍「 ✦ MaycolPlus ✦ 」
-│
-├─ Ay no bebé, algo salió mal...
-├─ ${e.message}
-╰─✦`
+    console.error(e);
+    await conn.sendMessage(
+      msg.key.remoteJid,
+      { text: "⚠️ Error al descargar el audio." },
+      { quoted: msg }
     );
-    await m.react("💔");
   }
 };
 
 handler.command = ["play"];
-handler.tags = ["descargas"];
-handler.help = ["play"];
 
 export default handler;
