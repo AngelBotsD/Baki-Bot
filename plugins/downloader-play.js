@@ -20,59 +20,75 @@ const handler = async (msg, { conn, text }) => {
     react: { text: "🕒", key: msg.key }
   })
 
-  const res = await yts(text)
-  const video = res.videos[0]
-  if (!video) {
-    return conn.sendMessage(
-      msg.key.remoteJid,
-      { text: "❌ Sin resultados." },
-      { quoted: msg }
-    )
-  }
-
-  const { url: videoUrl, title, timestamp: duration, author } = video
-  const artista = author.name
-
-  let videoDownloadUrl = null
-  let calidadElegida = "Desconocida"
-
   try {
-    // ====== PRIMERA API ======
+    const res = await yts(text)
+    const video = res.videos[0]
+    if (!video) {
+      return conn.sendMessage(
+        msg.key.remoteJid,
+        { text: "❌ Sin resultados." },
+        { quoted: msg }
+      )
+    }
+
+    const { url: videoUrl, title, timestamp: duration, author } = video
+    const artista = author.name
+
+    const posibles = ["2160p","1440p","1080p","720p","480p","360p","240p","144p"]
+
+    let downloadUrl = null
+    let calidadElegida = null
+
+    // 🔹 Intentar con primera API (Mayapi)
     try {
-      const api1 = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&apikey=may-0595dca2`
-      const r1 = await axios.get(api1)
-
-      if (r1.data?.status && r1.data?.result?.url) {
-        videoDownloadUrl = r1.data.result.url
-        calidadElegida = r1.data.result.quality || "Automática"
-      }
-    } catch (err) {
-      console.log("❌ Primera API falló:", err.message)
-    }
-
-    // ====== SEGUNDA API (si la primera no dio) ======
-    if (!videoDownloadUrl) {
-      try {
-        const api2 = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&apikey=russellxz`
-        const r2 = await axios.get(api2)
-
-        if (r2.data?.status && r2.data?.data?.url) {
-          videoDownloadUrl = r2.data.data.url
-          calidadElegida = r2.data.data.quality || "Automática"
+      for (const q of posibles) {
+        const api1 = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&apikey=may-0595dca2`
+        const res1 = await axios.get(api1)
+        if (res1.data?.status && res1.data?.result?.url) {
+          downloadUrl = res1.data.result.url
+          calidadElegida = res1.data.result.quality || q
+          break
         }
-      } catch (err) {
-        console.log("❌ Segunda API falló:", err.message)
+      }
+    } catch (e) {
+      console.log("⚠️ Falló Mayapi:", e.message)
+    }
+
+    // 🔹 Si la primera no funcionó, intentar con segunda API (Neoxr)
+    if (!downloadUrl) {
+      try {
+        for (const q of posibles) {
+          const api2 = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=russellxz`
+          const res2 = await axios.get(api2)
+          if (res2.data?.status && res2.data?.data?.url) {
+            downloadUrl = res2.data.data.url
+            calidadElegida = res2.data.data.quality || q
+            break
+          }
+        }
+      } catch (e) {
+        console.log("⚠️ Falló Neoxr:", e.message)
       }
     }
 
-    if (!videoDownloadUrl) throw new Error("No se pudo obtener el video en ninguna API")
+    if (!downloadUrl) {
+      throw new Error("Ninguna API pudo entregar el video")
+    }
 
-    // ====== DESCARGA ======
+    const caption = `
+> 𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁
+
+🎵 Título: ${title}
+🎤 Artista: ${artista}
+🕑 Duración: ${duration}
+📹 Calidad: ${calidadElegida || "Desconocida"}
+`.trim()
+
     const tmp = path.join(process.cwd(), "tmp")
     if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
     const file = path.join(tmp, `${Date.now()}_vid.mp4`)
 
-    const dl = await axios.get(videoDownloadUrl, { responseType: "stream" })
+    const dl = await axios.get(downloadUrl, { responseType: "stream" })
     await streamPipe(dl.data, fs.createWriteStream(file))
 
     await conn.sendMessage(
@@ -81,16 +97,7 @@ const handler = async (msg, { conn, text }) => {
         video: fs.readFileSync(file),
         mimetype: "video/mp4",
         fileName: `${title}.mp4`,
-        caption: `
-> 🎬 *VIDEO DOWNLOADER*
-
-🎵 *Título:* ${title}
-🎤 *Artista:* ${artista}
-🕑 *Duración:* ${duration}
-📺 *Calidad:* ${calidadElegida}
-        `.trim(),
-        supportsStreaming: true,
-        contextInfo: { isHd: true }
+        caption
       },
       { quoted: msg }
     )
@@ -101,10 +108,10 @@ const handler = async (msg, { conn, text }) => {
       react: { text: "✅", key: msg.key }
     })
   } catch (e) {
-    console.error(e)
+    console.error("Error final:", e)
     await conn.sendMessage(
       msg.key.remoteJid,
-      { text: "⚠️ Error al descargar el video." },
+      { text: "⚠️ No se pudo descargar el video en ninguna calidad." },
       { quoted: msg }
     )
   }
