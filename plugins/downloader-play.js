@@ -33,45 +33,33 @@ const handler = async (msg, { conn, text }) => {
   const { url: videoUrl, title, timestamp: duration, author } = video
   const artista = author.name
 
+  const posibles = ["1080p", "720p", "480p", "360p"]
+
   let videoDownloadUrl = null
   let calidadElegida = "Desconocida"
   let apiUsada = "Desconocida"
   let errorLogs = []
 
   try {
-    // MayAPI
-    try {
-      const api1 = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&apikey=may-0595dca2`
-      const r1 = await axios.get(api1, { timeout: 60000 })
-
-      if (r1.data?.status && r1.data?.result?.url) {
-        videoDownloadUrl = r1.data.result.url
-        calidadElegida = r1.data.result.quality || "Automática"
-        apiUsada = "MayAPI"
-      }
-    } catch (err) {
-      errorLogs.push(`MayAPI: ${err.message}`)
-    }
-
-    // NeoxR (solo si no funcionó la primera)
-    if (!videoDownloadUrl) {
+    for (const q of posibles) {
       try {
-        const api2 = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&apikey=russellxz`
-        const r2 = await axios.get(api2, { timeout: 60000 })
+        const api1 = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&quality=${q}&apikey=may-0595dca2`
+        const r1 = await axios.get(api1, { timeout: 60000 })
 
-        if (r2.data?.status && r2.data?.data?.url) {
-          videoDownloadUrl = r2.data.data.url
-          calidadElegida = r2.data.data.quality || "Automática"
-          apiUsada = "NeoxR"
+        if (r1.data?.status && r1.data?.result?.url) {
+          videoDownloadUrl = r1.data.result.url
+          calidadElegida = r1.data.result.quality || q
+          apiUsada = "MayAPI"
+          break
         }
       } catch (err) {
-        errorLogs.push(`NeoxR: ${err.message}`)
+        errorLogs.push(`MayAPI (${q}): ${err.message}`)
       }
     }
 
     if (!videoDownloadUrl) {
       throw new Error(
-        "No se pudo obtener el video.\n\nLogs:\n" +
+        "No se pudo obtener el video en ninguna calidad.\n\nLogs:\n" +
         errorLogs.join("\n")
       )
     }
