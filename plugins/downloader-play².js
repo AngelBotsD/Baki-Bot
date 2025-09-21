@@ -1,93 +1,82 @@
-import axios from "axios";
 import yts from "yt-search";
-import fs from "fs";
-import path from "path";
-import { promisify } from "util";
-import { pipeline } from "stream";
+import fetch from "node-fetch";
 
-const streamPipe = promisify(pipeline);
-
-const handler = async (msg, { conn, text }) => {
+const handler = async (m, { conn, text }) => {
   if (!text || !text.trim()) {
     return conn.sendMessage(
-      msg.key.remoteJid,
-      { text: `*💽 𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝙴𝚕 𝙽𝚘𝚖𝚋𝚛𝚎 𝚍𝚎 𝚊𝚕𝚐𝚞𝚗𝚊 𝙲𝚊𝚗𝚌𝚒𝚘𝚗*` },
-      { quoted: msg }
+      m.chat,
+      { text: `*💽 Ingresa el nombre de alguna canción*` },
+      { quoted: m }
     );
   }
 
-  await conn.sendMessage(msg.key.remoteJid, {
-    react: { text: "🕒", key: msg.key }
-  });
-
-  const res = await yts(text);
-  const video = res.videos[0];
-  if (!video) {
-    return conn.sendMessage(
-      msg.key.remoteJid,
-      { text: "❌ Sin resultados." },
-      { quoted: msg }
-    );
-  }
-
-  const { url: videoUrl, title, timestamp: duration, author, thumbnail } = video;
-  const artista = author.name;
+  // React de "buscando"
+  await conn.sendMessage(m.chat, { react: { text: "🕒", key: m.key } });
 
   try {
-    const infoMsg = `
-> *𝚈𝙾𝚄𝚃𝚄𝙱𝙴 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
+    const res = await yts(text);
+    if (!res?.videos?.length) {
+      return conn.sendMessage(
+        m.chat,
+        { text: "❌ No se encontró ningún video con ese nombre." },
+        { quoted: m }
+      );
+    }
 
-🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${title}
-🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
-🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
-`.trim();
+    const video = res.videos[0];
+    const { url: videoUrl, title, author, timestamp: duration, thumbnail } = video;
+    const artista = author?.name || "Desconocido";
+
+    // Enviar info del video
+    const infoMsg = `
+> *🎬 YouTube Downloader*
+
+🎵 *Título:* ${title}
+🎤 *Artista:* ${artista}
+🕑 *Duración:* ${duration}
+    `.trim();
 
     await conn.sendMessage(
-      msg.key.remoteJid,
+      m.chat,
       { image: { url: thumbnail }, caption: infoMsg },
-      { quoted: msg }
+      { quoted: m }
     );
 
-    // Usando tu API para obtener audio
+    // Descargar audio desde tu API
     const apiAudio = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=opus&apikey=soymaycol<3`;
-    const r = await axios.get(apiAudio);
-    if (!r.data?.status || !r.data?.result?.url) throw new Error("No se pudo obtener el audio");
+    const r = await fetch(apiAudio);
+    const data = await r.json();
 
-    const tmp = path.join(process.cwd(), "tmp");
-    if (!fs.existsSync(tmp)) fs.mkdirSync(tmp);
-    const outFile = path.join(tmp, `${Date.now()}_audio.opus`);
+    if (!data?.status || !data?.result?.url) {
+      throw new Error("No se pudo obtener el audio desde la API");
+    }
 
-    const dl = await axios.get(r.data.result.url, { responseType: "stream" });
-    await streamPipe(dl.data, fs.createWriteStream(outFile));
-
-    const buffer = fs.readFileSync(outFile);
+    const audioBuffer = await fetch(data.result.url).then(res => res.arrayBuffer());
+    const buffer = Buffer.from(audioBuffer);
 
     await conn.sendMessage(
-      msg.key.remoteJid,
+      m.chat,
       {
         audio: buffer,
         mimetype: "audio/ogg; codecs=opus",
         fileName: `${title}.opus`,
-        ptt: false // audio normal, no PTT
+        ptt: false // audio normal
       },
-      { quoted: msg }
+      { quoted: m }
     );
 
-    fs.unlinkSync(outFile);
+    // React de éxito
+    await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
 
-    await conn.sendMessage(msg.key.remoteJid, {
-      react: { text: "✅", key: msg.key }
-    });
   } catch (e) {
-    console.error(e);
+    console.error("Error al descargar audio:", e);
     await conn.sendMessage(
-      msg.key.remoteJid,
-      { text: "⚠️ Error al descargar el audio." },
-      { quoted: msg }
+      m.chat,
+      { text: "⚠️ Error al descargar el audio. Intenta otra canción." },
+      { quoted: m }
     );
   }
 };
 
 handler.command = ["play"];
-
 export default handler;
