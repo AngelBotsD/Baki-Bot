@@ -1,9 +1,42 @@
 // Codigo de SoyMaycol y no quites creditos
 import yts from "yt-search";
 import fetch from "node-fetch";
+import { spawn } from "child_process";
+import fs from "fs";
+import ffmpeg from "ffmpeg-static";
 
 function cleanName(name) {
   return name.replace(/[^\w\s-_.]/gi, "").substring(0, 50);
+}
+
+// 🔥 Función para convertir a Opus
+async function convertToOpus(inputBuffer) {
+  return new Promise((resolve, reject) => {
+    const tmpIn = "./tmp_in.mp3";
+    const tmpOut = "./tmp_out.opus";
+    fs.writeFileSync(tmpIn, inputBuffer);
+
+    const ff = spawn(ffmpeg, [
+      "-y",
+      "-i", tmpIn,
+      "-c:a", "libopus",
+      "-b:a", "128k",
+      tmpOut,
+    ]);
+
+    ff.on("close", () => {
+      try {
+        const output = fs.readFileSync(tmpOut);
+        fs.unlinkSync(tmpIn);
+        fs.unlinkSync(tmpOut);
+        resolve(output);
+      } catch (err) {
+        reject(err);
+      }
+    });
+
+    ff.on("error", (err) => reject(err));
+  });
 }
 
 const handler = async (m, { conn, text }) => {
@@ -56,19 +89,20 @@ const handler = async (m, { conn, text }) => {
       throw new Error("No pude conseguir lo que querías bebé");
     }
 
-    // 🔥 Descargar el audio como buffer
-    const audioBuffer = await fetch(data.result.url).then((res) =>
-      res.buffer()
-    );
+    // 🔥 Descargar el audio
+    const audioBuffer = await fetch(data.result.url).then((res) => res.buffer());
 
-    // ✅ Enviar como nota de voz para evitar error
+    // 🔄 Convertir a OGG/Opus
+    const opusBuffer = await convertToOpus(audioBuffer);
+
+    // ✅ Mandar como nota de voz (ptt)
     await conn.sendMessage(
       m.chat,
       {
-        audio: audioBuffer,
-        mimetype: "audio/mp4", // más compatible que audio/mpeg
-        fileName: cleanName(title) + ".mp3",
-        ptt: true, // lo manda como nota de voz (seguro funciona)
+        audio: opusBuffer,
+        mimetype: "audio/ogg; codecs=opus",
+        ptt: true,
+        fileName: cleanName(title) + ".opus",
       },
       { quoted: m }
     );
