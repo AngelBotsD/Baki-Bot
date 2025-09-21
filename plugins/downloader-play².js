@@ -13,7 +13,7 @@ const handler = async (m, { conn, text }) => {
 ├─ Dame el nombre de un video o URL de YouTube
 ╰─✦`);
 
-  await m.react("🕒");
+  await m.react("🔥");
 
   try {
     const res = await yts(text);
@@ -39,7 +39,7 @@ const handler = async (m, { conn, text }) => {
 ├─ Déjame trabajar mi magia... ♡
 ╰─✦`;
 
-    const sentMessage = await conn.sendMessage(
+    await conn.sendMessage(
       m.chat,
       { image: { url: thumbnail }, caption: initialMessage },
       { quoted: m }
@@ -61,13 +61,14 @@ const handler = async (m, { conn, text }) => {
       res.buffer()
     );
 
-    // ✅ Enviar como buffer (no url) para evitar error de WhatsApp
+    // ✅ Enviar como nota de voz para evitar error
     await conn.sendMessage(
       m.chat,
       {
         audio: audioBuffer,
-        mimetype: "audio/mpeg",
+        mimetype: "audio/mp4", // más compatible que audio/mpeg
         fileName: cleanName(title) + ".mp3",
+        ptt: true, // lo manda como nota de voz (seguro funciona)
       },
       { quoted: m }
     );
