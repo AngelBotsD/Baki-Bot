@@ -103,6 +103,21 @@ const handler = async (msg, { conn, text }) => {
     })
     await streamPipe(dl.data, fs.createWriteStream(file))
 
+    // ⚠️ Validar tamaño (máximo 60 MB)
+    const stats = fs.statSync(file)
+    const maxSize = 60 * 1024 * 1024 // 60 MB en bytes
+
+    if (stats.size > maxSize) {
+      fs.unlinkSync(file)
+      return await conn.sendMessage(
+        msg.key.remoteJid,
+        {
+          text: `⚠️ El video pesa más de *60 MB* y no se puede enviar por WhatsApp.\n\n🎵 *Título:* ${title}\n🎤 *Artista:* ${artista}\n🕑 *Duración:* ${duration}\n📺 *Calidad:* ${calidadElegida}\n🌐 *Api:* ${apiUsada}`
+        },
+        { quoted: msg }
+      )
+    }
+
     await conn.sendMessage(
       msg.key.remoteJid,
       {
