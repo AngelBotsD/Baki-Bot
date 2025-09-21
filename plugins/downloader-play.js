@@ -1,81 +1,89 @@
-// Codigo de SoyMaycol y no quites creditos
-import yts from "yt-search";
+import axios from "axios"
+import yts from "yt-search"
+import fs from "fs"
+import path from "path"
+import { promisify } from "util"
+import { pipeline } from "stream"
 
-const handler = async (m, { conn, text, command }) => {
-if (!text) return m.reply(`╭─❍「 ✦ MaycolPlus ✦ 」
-│
-├─ Ay bebé, necesito algo para trabajar~
-├─ Dame el nombre de un video de YouTube
-├─ y yo haré magia para ti... ♡
-│
-├─ ¿No sabes cómo usarme? Escribe:
-│   ⇝ .help
-├─ Te aseguro que valdré la pena~
-╰─✦`);
+const streamPipe = promisify(pipeline)
 
-await m.react("🔥");  
+const handler = async (msg, { conn, text }) => {
+  if (!text || !text.trim()) {
+    return conn.sendMessage(
+      msg.key.remoteJid,
+      { text: `*🎬 𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝙴𝚕 𝙽𝚘𝚖𝚋𝚛𝚎 𝚍𝚎 𝙰𝚕𝚐𝚞𝚗 𝚅𝚒𝚍𝚎𝚘*` },
+      { quoted: msg }
+    )
+  }
 
-try {  
-    const res = await yts(text);  
-    if (!res || !res.videos || res.videos.length === 0) {  
-        return m.reply(`╭─❍「 ✦ MaycolPlus ✦ 」
-│
-├─ Mmm... no encuentro nada así bebé
-├─ Intenta con algo más específico
-├─ que me haga sudar un poquito~ ♡
-╰─✦`);
+  await conn.sendMessage(msg.key.remoteJid, {
+    react: { text: "🕒", key: msg.key }
+  })
+
+  const res = await yts(text)
+  const video = res.videos[0]
+  if (!video) {
+    return conn.sendMessage(
+      msg.key.remoteJid,
+      { text: "❌ Sin resultados." },
+      { quoted: msg }
+    )
+  }
+
+  const { url: videoUrl, title, timestamp: duration, author } = video
+  const artista = author.name
+
+  const caption = `
+> 𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁
+
+🎵 𝚃𝚒𝚝𝚞𝚕𝚘: ${title}
+🎤 𝙰𝚛𝚝𝚒𝚜𝚝𝚊: ${artista}
+🕑 𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗: ${duration}
+`.trim()
+
+  try {
+    const apiUrl = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&apikey=may-0595dca2`
+    const apiRes = await axios.get(apiUrl)
+    
+    if (!apiRes.data?.status || !apiRes.data?.result?.url) {
+      throw new Error("No se pudo obtener el video desde la API")
     }
 
-    const video = res.videos[0];  
-    const title = video.title || "Sin título";  
-    const authorName = video.author?.name || "Desconocido";  
-    const durationTimestamp = video.timestamp || "Desconocida";  
-    const url = video.url || "";  
+    const videoDownloadUrl = apiRes.data.result.url
 
-    await downloadVideo(conn, m, url, title, authorName, durationTimestamp);  
+    const tmp = path.join(process.cwd(), "tmp")
+    if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
+    const file = path.join(tmp, `${Date.now()}_vid.mp4`)
 
-} catch (error) {  
-    console.error("Error general:", error);  
-    await m.reply(`╭─❍「 ✦ MaycolPlus ✦ 」
-│
-├─ Ay no bebé, algo salió mal...
-├─ Pero no te preocupes, sigo siendo tuya~ ♡
-├─ Error: ${error.message}
-├─ Inténtalo otra vez, prometo portarme bien
-╰─✦`);
-    await m.react("💔");
-}
-};
+    const dl = await axios.get(videoDownloadUrl, { responseType: "stream" })
+    await streamPipe(dl.data, fs.createWriteStream(file))
 
-const downloadVideo = async (conn, m, url, title, artist, duration) => {
-try {  
-    const apiUrl = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(url)}&type=mp4&apikey=may-0595dca2`;  
-    const response = await fetch(apiUrl);
-    const data = await response.json();
-
-    if (!data || !data.status || !data.result || !data.result.url) {  
-        throw new Error("No pude darte lo que querías amor");  
-    }  
-
-    const caption = `> *𝚈𝚃𝙼𝙿4 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*\n\n🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${title}\n🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artist}\n🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}\n📹 *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* 1080p`;
-
-    await conn.sendMessage(m.chat, {  
-        video: { url: data.result.url },  
-        mimetype: "video/mp4",  
-        fileName: title + ".mp4",
+    await conn.sendMessage(
+      msg.key.remoteJid,
+      {
+        video: fs.readFileSync(file),
+        mimetype: "video/mp4",
+        fileName: `${title}.mp4`,
         caption
-    }, { quoted: m });
+      },
+      { quoted: msg }
+    )
 
-    await m.react("🔥");  
+    fs.unlinkSync(file)
 
-} catch (error) {  
-    console.error("Error descargando video:", error);  
-    await m.reply(`Error descargando video: ${error.message}`);
-    await m.react("😈");  
+    await conn.sendMessage(msg.key.remoteJid, {
+      react: { text: "✅", key: msg.key }
+    })
+  } catch (e) {
+    console.error(e)
+    await conn.sendMessage(
+      msg.key.remoteJid,
+      { text: "⚠️ Error al descargar el video." },
+      { quoted: msg }
+    )
+  }
 }
-};
 
-handler.command = ["play2"];
-handler.tags = ["descargas"];
+handler.command = ["play2"]
 
-export default handler;
+export default handler
