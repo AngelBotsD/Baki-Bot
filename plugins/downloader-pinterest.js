@@ -1,5 +1,4 @@
 import axios from "axios"
-import yts from "yt-search"
 import fs from "fs"
 import path from "path"
 import { promisify } from "util"
@@ -30,7 +29,6 @@ const handler = async (msg, { conn, text }) => {
   })
 
   const videoUrl = text.trim()
-  const posibles = ["1080p", "720p", "480p", "360p"]
 
   let videoDownloadUrl = null
   let calidadElegida = "Desconocida"
@@ -42,35 +40,34 @@ const handler = async (msg, { conn, text }) => {
       return new Promise(async (resolve, reject) => {
         const controller = new AbortController()
         try {
-          for (const q of posibles) {
-            const apiUrl = urlBuilder(q)
-            const r = await axios.get(apiUrl, {
-              timeout: 60000,
-              signal: controller.signal
+          const apiUrl = urlBuilder()
+          const r = await axios.get(apiUrl, {
+            timeout: 60000,
+            signal: controller.signal
+          })
+          if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
+            resolve({
+              url: r.data.result?.url || r.data.data?.url,
+              quality: r.data.result?.quality || r.data.data?.quality || "Desconocida",
+              api: apiName,
+              controller
             })
-            if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
-              resolve({
-                url: r.data.result?.url || r.data.data?.url,
-                quality: r.data.result?.quality || r.data.data?.quality || q,
-                api: apiName,
-                controller
-              })
-              return
-            }
+            return
           }
           reject(new Error(`${apiName}: No entregó un URL válido`))
         } catch (err) {
+          errorLogs.push(`${apiName}: ${err.message}`)
           reject(new Error(`${apiName}: ${err.message}`))
         }
       })
     }
 
-    const mayApi = tryApi("MayAPI", q =>
-      `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&quality=${q}&apikey=may-0595dca2`
+    const mayApi = tryApi("MayAPI", () =>
+      `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&apikey=may-0595dca2`
     )
 
-    const neoxApi = tryApi("NeoxR", q =>
-      `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=russellxz`
+    const neoxApi = tryApi("NeoxR", () =>
+      `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&apikey=russellxz`
     )
 
     let winner
@@ -119,15 +116,12 @@ const handler = async (msg, { conn, text }) => {
       {
         video: fs.readFileSync(file),
         mimetype: "video/mp4",
-        fileName: `${title || "video"}.mp4`,
+        fileName: `${Date.now()}_video.mp4`,
         caption: `
 > *𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
-🎵 *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title || "Desconocido"}
-🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista || "Desconocido"}
-🕑 *𝙳𝚞𝚛𝚊𝚌𝚒𝚘́𝚗:* ${duration || "N/A"}
-📺 *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
-🌐 *𝙰𝚙𝚒:* ${apiUsada}
+📺 *Calidad:* ${calidadElegida}
+🌐 *Api:* ${apiUsada}
 `.trim(),
         supportsStreaming: true,
         contextInfo: { isHd: true }
