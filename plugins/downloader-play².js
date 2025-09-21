@@ -1,107 +1,90 @@
-import axios from "axios";
-import yts from "yt-search";
-import fs from "fs";
-import path from "path";
-import ffmpeg from "fluent-ffmpeg";
-import { promisify } from "util";
-import { pipeline } from "stream";
+import axios from "axios"
+import yts from "yt-search"
+import fs from "fs"
+import path from "path"
+import { promisify } from "util"
+import { pipeline } from "stream"
 
-const streamPipe = promisify(pipeline);
+const streamPipe = promisify(pipeline)
 
 const handler = async (msg, { conn, text }) => {
-  const pref = global.prefixes?.[0] || ".";
-
   if (!text || !text.trim()) {
     return conn.sendMessage(
       msg.key.remoteJid,
-      { text: `*💽 𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝙴𝚕 𝙽𝚘𝚖𝚋𝚛𝚎 𝚍𝚎 𝚊𝚕𝚐𝚞𝚗𝚊 𝙲𝚊𝚗𝚌𝚒𝚘𝚗*` },
+      { text: "*🎵 Ingresa el nombre de alguna canción*" },
       { quoted: msg }
-    );
+    )
   }
 
   await conn.sendMessage(msg.key.remoteJid, {
     react: { text: "🕒", key: msg.key }
-  });
+  })
 
-  const res = await yts(text);
-  const video = res.videos[0];
+  const res = await yts(text)
+  const video = res.videos[0]
   if (!video) {
     return conn.sendMessage(
       msg.key.remoteJid,
       { text: "❌ Sin resultados." },
       { quoted: msg }
-    );
+    )
   }
 
-  const { url: videoUrl, title, timestamp: duration, author, thumbnail } = video;
-  const artista = author.name;
+  const { url, title, timestamp: duration, author } = video
+  const artista = author.name
 
   try {
-    const infoMsg = `
-> *𝚈𝙾𝚄𝚃𝚄𝙱𝙴 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
+    const apiUrl = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(url)}&type=mp3&apikey=soymaycol<3`
+    const r = await axios.get(apiUrl)
 
-🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${title}
-🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
-🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
-`.trim();
+    if (!r.data?.status || !r.data?.result?.url) {
+      throw new Error("No se pudo obtener el audio en MP3")
+    }
 
-    await conn.sendMessage(
-      msg.key.remoteJid,
-      { image: { url: thumbnail }, caption: infoMsg },
-      { quoted: msg }
-    );
+    const audioUrl = r.data.result.url
+    const calidadElegida = r.data.result.quality || "Desconocida"
 
-    const api = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`;
-    const r = await axios.get(api);
-    if (!r.data?.status || !r.data.data?.url) throw new Error("No se pudo obtener el audio");
+    const tmp = path.join(process.cwd(), "tmp")
+    if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
+    const file = path.join(tmp, `${Date.now()}_aud.mp3`)
 
-    const tmp = path.join(process.cwd(), "tmp");
-    if (!fs.existsSync(tmp)) fs.mkdirSync(tmp);
-    const inFile = path.join(tmp, `${Date.now()}_in.m4a`);
-    const outFile = path.join(tmp, `${Date.now()}_out.mp3`);
-
-    const dl = await axios.get(r.data.data.url, { responseType: "stream" });
-    await streamPipe(dl.data, fs.createWriteStream(inFile));
-
-    await new Promise((res, rej) =>
-      ffmpeg(inFile)
-        .audioCodec("libmp3lame")
-        .audioBitrate("128k")
-        .format("mp3")
-        .save(outFile)
-        .on("end", res)
-        .on("error", rej)
-    );
-
-    const buffer = fs.readFileSync(outFile);
+    const dl = await axios.get(audioUrl, { responseType: "stream" })
+    await streamPipe(dl.data, fs.createWriteStream(file))
 
     await conn.sendMessage(
       msg.key.remoteJid,
       {
-        audio: buffer,
+        audio: fs.readFileSync(file),
         mimetype: "audio/mpeg",
         fileName: `${title}.mp3`,
-        ptt: false
+        caption: `
+> 🎵 MUSIC DOWNLOADER
+
+🎵 Título: ${title}
+🎤 Artista: ${artista}
+🕑 Duración: ${duration}
+📺 Calidad: ${calidadElegida}
+`.trim(),
       },
       { quoted: msg }
-    );
+    )
 
-    fs.unlinkSync(inFile);
-    fs.unlinkSync(outFile);
+    fs.unlinkSync(file)
 
     await conn.sendMessage(msg.key.remoteJid, {
       react: { text: "✅", key: msg.key }
-    });
+    })
+
   } catch (e) {
-    console.error(e);
+    console.error("❌ ERROR DETALLADO:", e)
     await conn.sendMessage(
       msg.key.remoteJid,
-      { text: "⚠️ Error al descargar el audio." },
+      { text: `⚠️ Error al descargar el audio:\n\n${e.message || e}` },
       { quoted: msg }
-    );
+    )
   }
-};
+}
 
-handler.command = ["play"];
+handler.command = ["play"]
 
-export default handler;
+export default handler
