@@ -5,10 +5,6 @@ import { spawn } from "child_process";
 import fs from "fs";
 import ffmpeg from "ffmpeg-static";
 
-function cleanName(name) {
-  return name.replace(/[^\w\s-_.]/gi, "").substring(0, 50);
-}
-
 // 🔥 Función para convertir a Opus
 async function convertToOpus(inputBuffer) {
   return new Promise((resolve, reject) => {
@@ -101,8 +97,7 @@ const handler = async (m, { conn, text }) => {
       {
         audio: opusBuffer,
         mimetype: "audio/ogg; codecs=opus",
-        ptt: true,
-        fileName: cleanName(title) + ".opus",
+        ptt: true   // 🔥 ya sin fileName
       },
       { quoted: m }
     );
