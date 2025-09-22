@@ -1,53 +1,57 @@
-import axios from "axios"
+import axios from 'axios'
+const {proto, generateWAMessageFromContent, prepareWAMessageMedia, generateWAMessageContent, getDevice} = (await import("@whiskeysockets/baileys")).default
 
-let handler = async (m, { conn, text, command, usedPrefix }) => {
-  if (!text) throw `✳️ Ejemplo de uso:\n${usedPrefix + command} Yerzy y Los Menores`
-
-  try {
-    // Aviso inicial
-    await conn.sendMessage(m.chat, { text: "📂 Descargando sus videos, espere un momento..." }, { quoted: m })
-
-    // API URL
-    let url = `https://mayapi.ooguy.com/tiktoks?query=${encodeURIComponent(text)}&apikey=may-0595dca2`
-    let res = await axios.get(url)
-
-    if (!res.data || !res.data.result || res.data.result.length === 0) {
-      throw "⚠️ No se encontraron resultados en TikTok."
-    }
-
-    // Tomamos solo los primeros 7 resultados
-    let results = res.data.result.slice(0, 7)
-
-    // Aviso de búsqueda
-    await conn.sendMessage(m.chat, { 
-      text: `🔎 Resultado de: *${text}*\nTiktok - Busqueda` 
-    }, { quoted: m })
-
-    for (let video of results) {
-      let titulo = video.title || "Sin título"
-      let autor = video.author || "Desconocido"
-      let hashtags = video.hashtags?.join(" ") || ""
-      let link = video.url || null
-
-      if (!link) continue
-
-      let caption = `${hashtags}`
-
-      // Enviar cada video con su caption (hashtags)
-      await conn.sendMessage(m.chat, {
-        video: { url: link },
-        caption: caption
-      }, { quoted: m })
-    }
-
-  } catch (e) {
-    console.error(e)
-    throw "❌ Error al obtener los videos de TikTok."
-  }
+let handler = async (message, { conn, text, usedPrefix, command }) => {
+if (!text) return conn.reply(message.chat, `📄 Por favor, ingrese lo que desea buscar en tiktok.`, message)
+async function createVideoMessage(url) {
+const { videoMessage } = await generateWAMessageContent({ video: { url } }, { upload: conn.waUploadToServer })
+return videoMessage
 }
+async function shuffleArray(array) {
+for (let i = array.length - 1; i > 0; i--) {
+const j = Math.floor(Math.random() * (i + 1));
+[array[i], array[j]] = [array[j], array[i]]
+}
+}
+try {
+await message.react(rwait)
+conn.reply(message.chat, `📄 Descargando Su Video, espere un momento...`, message)
+let results = []
+let { data: response } = await axios.get('https://apis-starlights-team.koyeb.app/starlight/tiktoksearch?text=' + text)
+let searchResults = response.data
+shuffleArray(searchResults)
+let selectedResults = searchResults.splice(0, 7)
+for (let result of selectedResults) {
+results.push({
+body: proto.Message.InteractiveMessage.Body.fromObject({ text: null }),
+footer: proto.Message.InteractiveMessage.Footer.fromObject({ text: author }),
+header: proto.Message.InteractiveMessage.Header.fromObject({
+title: '' + result.title,
+hasMediaAttachment: true,
+videoMessage: await createVideoMessage(result.nowm)
+}),
+nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.fromObject({ buttons: [] })})}
+const responseMessage = generateWAMessageFromContent(message.chat, {
+viewOnceMessage: {
+message: {
+messageContextInfo: {
+deviceListMetadata: {},
+deviceListMetadataVersion: 2
+},
+interactiveMessage: proto.Message.InteractiveMessage.fromObject({
+body: proto.Message.InteractiveMessage.Body.create({ text: `${emoji} Resultado de: ` + text }),
+footer: proto.Message.InteractiveMessage.Footer.create({ text: 'Tiktok - Busqueda' }),
+header: proto.Message.InteractiveMessage.Header.create({ hasMediaAttachment: false }),
+carouselMessage: proto.Message.InteractiveMessage.CarouselMessage.fromObject({ cards: [...results] })})}}
+}, { quoted: message })
+await message.react(done)
+await conn.relayMessage(message.chat, responseMessage.message, { messageId: responseMessage.key.id })
+} catch (error) {
+await conn.reply(message.chat, error.toString(), message)
+}}
 
-handler.help = ["tiktoksearch <texto>"]
-handler.tags = ["buscador"]
-handler.command = ["ttse"]
+handler.help = ['tiktoksearch <txt>']
+handler.tags = ['search']
+handler.command = ['tiktoksearch', 'ttss', 'tiktoks']
 
 export default handler
