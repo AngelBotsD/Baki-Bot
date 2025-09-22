@@ -1,68 +1,47 @@
-import axios from 'axios'
-const {
-  proto,
-  generateWAMessageFromContent,
-  generateWAMessageContent
-} = (await import("@whiskeysockets/baileys")).default
+import axios from "axios"
 
-let handler = async (message, { conn, text }) => {
-  const avatar = 'https://qu.ax/XKFEL.jpg' 
-  const dev = 'xd' 
-  const redes = 'https://tusitio.com' 
-
-  if (!text) {
-    return conn.reply(message.chat, "🥷🏻 Ingresa un texto para buscar en TikTok.", message)
-  }
+let handler = async (m, { conn, text, command, usedPrefix }) => {
+  if (!text) throw `✳️ Ejemplo de uso:\n${usedPrefix + command} Yerzy y Los Menores`
 
   try {
-    // mensaje de espera ⌛
-    conn.sendMessage(message.chat, {
-      text: '⌛ *Buscando en TikTok...*',
-      contextInfo: { externalAdReply: { title: 'Descargas', body: dev, thumbnailUrl: avatar, sourceUrl: redes, mediaType: 1, showAdAttribution: true }}
-    }, { quoted: message })
+    // Aviso inicial
+    await conn.sendMessage(m.chat, { text: "⏳ Buscando y descargando videos, espere un momento..." }, { quoted: m })
 
-    let { data } = await axios.get("https://apis-starlights-team.koyeb.app/starlight/tiktoksearch?text=" + text)
-    let searchResults = data.data.slice(0, 6) // solo 6 resultados, + rápido
+    let url = `https://tu_api/tiktoks?query=${encodeURIComponent(text)}&apikey=may-0595dca2`
+    let res = await axios.get(url)
 
-    // crear todos los videoMessage en paralelo
-    const videoMsgs = await Promise.all(
-      searchResults.map(r => generateWAMessageContent({ video: { url: r.nowm } }, { upload: conn.waUploadToServer }))
-    )
+    if (!res.data || !res.data.result || res.data.result.length === 0) {
+      throw "⚠️ No se encontraron resultados en TikTok."
+    }
 
-    let cards = searchResults.map((r, i) => ({
-      body: proto.Message.InteractiveMessage.Body.fromObject({ text: null }),
-      footer: proto.Message.InteractiveMessage.Footer.fromObject({ text: dev }),
-      header: proto.Message.InteractiveMessage.Header.fromObject({
-        title: r.title,
-        hasMediaAttachment: true,
-        videoMessage: videoMsgs[i].videoMessage
-      }),
-      nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.fromObject({ buttons: [] })
-    }))
+    // Tomamos solo los primeros 7 resultados
+    let results = res.data.result.slice(0, 7)
 
-    const msg = generateWAMessageFromContent(message.chat, {
-      viewOnceMessage: {
-        message: {
-          interactiveMessage: proto.Message.InteractiveMessage.fromObject({
-            body: proto.Message.InteractiveMessage.Body.create({ text: "🥷🏻 RESULTADOS DE: " + text }),
-            footer: proto.Message.InteractiveMessage.Footer.create({ text: dev }),
-            header: proto.Message.InteractiveMessage.Header.create({ hasMediaAttachment: false }),
-            carouselMessage: proto.Message.InteractiveMessage.CarouselMessage.fromObject({ cards })
-          })
-        }
-      }
-    }, { quoted: message })
+    for (let video of results) {
+      let titulo = video.title || "Sin título"
+      let autor = video.author || "Desconocido"
+      let hashtags = video.hashtags?.join(" ") || ""
+      let link = video.url || null
 
-    await conn.relayMessage(message.chat, msg.message, { messageId: msg.key.id })
+      if (!link) continue
 
-  } catch (error) {
-    conn.reply(message.chat, `⚠︎ *ERROR:* ${error.message}`, message)
+      let caption = `🎵 *TikTok Search*\n\n📌 *Título:* ${titulo}\n👤 *Autor:* ${autor}\n${hashtags}`
+      
+      // Enviar el video directamente
+      await conn.sendMessage(m.chat, {
+        video: { url: link },
+        caption: caption
+      }, { quoted: m })
+    }
+
+  } catch (e) {
+    console.error(e)
+    throw "❌ Error al obtener los videos de TikTok."
   }
 }
 
-handler.help = ["tiktoksearch <txt>"]
-handler.group = true
+handler.help = ["tiktoksearch <texto>"]
 handler.tags = ["buscador"]
-handler.command = ["tiktoksearch", "ttss", "tiktoks"]
+handler.command = ["ttse"]
 
 export default handler
