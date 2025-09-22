@@ -33,7 +33,6 @@ const handler = async (msg, { conn, text }) => {
 
   const { url: videoUrl, title, timestamp: duration, author } = video
   const artista = author.name
-  const posibles = ["1080p", "720p", "480p", "360p"]
 
   let videoDownloadUrl = null
   let calidadElegida = "Desconocida"
@@ -60,27 +59,25 @@ const handler = async (msg, { conn, text }) => {
       })
     }
 
-    // MayAPI
     const mayApi = tryApi("MayAPI", () =>
       `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&apikey=may-0595dca2`
     )
 
-    // NeoxR
     const neoxApi = tryApi("NeoxR", () =>
       `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&apikey=russellxz`
     )
 
-    // Adonix API
-    const adonixApi = tryApi("Adonix", () =>
-      `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}`
+    const adonixMp4Api = tryApi("AdonixMP4", () =>
+      `https://api-adonix.ultraplus.click/download/ytmp4?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}`
     )
 
-    // Competencia 🔥
-    const winner = await Promise.any([mayApi, neoxApi, adonixApi])
+    const winner = await Promise.any([mayApi, neoxApi, adonixMp4Api])
 
     videoDownloadUrl = winner.url
     calidadElegida = winner.quality
     apiUsada = winner.api
+
+    console.log(`✅ API ganadora: ${apiUsada} | Calidad: ${calidadElegida}`)
 
     const tmp = path.join(process.cwd(), "tmp")
     if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
