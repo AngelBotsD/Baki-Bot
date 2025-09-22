@@ -38,28 +38,20 @@ const handler = async (msg, { conn, text }) => {
   let videoDownloadUrl = null
   let calidadElegida = "Desconocida"
   let apiUsada = "Desconocida"
-  let errorLogs = []
 
   try {
     const tryApi = (apiName, urlBuilder) => {
       return new Promise(async (resolve, reject) => {
-        const controller = new AbortController()
         try {
-          for (const q of posibles) {
-            const apiUrl = urlBuilder(q)
-            const r = await axios.get(apiUrl, {
-              timeout: 80000,
-              signal: controller.signal
+          const apiUrl = urlBuilder()
+          const r = await axios.get(apiUrl, { timeout: 80000 })
+          if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
+            resolve({
+              url: r.data.result?.url || r.data.data?.url,
+              quality: r.data.result?.quality || r.data.data?.quality || "Auto",
+              api: apiName
             })
-            if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
-              resolve({
-                url: r.data.result?.url || r.data.data?.url,
-                quality: r.data.result?.quality || r.data.data?.quality || q,
-                api: apiName,
-                controller
-              })
-              return
-            }
+            return
           }
           reject(new Error(`${apiName}: No entregó un URL válido`))
         } catch (err) {
@@ -68,29 +60,23 @@ const handler = async (msg, { conn, text }) => {
       })
     }
 
-    const mayApi = tryApi("MayAPI", q =>
-      `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&quality=${q}&apikey=may-0595dca2`
+    // MayAPI
+    const mayApi = tryApi("MayAPI", () =>
+      `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&apikey=may-0595dca2`
     )
 
-    const neoxApi = tryApi("NeoxR", q =>
-      `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=russellxz`
+    // NeoxR
+    const neoxApi = tryApi("NeoxR", () =>
+      `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&apikey=russellxz`
     )
 
-    let winner
-    try {
-      winner = await Promise.any([mayApi, neoxApi])
-    } catch (err) {
-      throw new Error(
-        "No se pudo obtener el video en ninguna calidad.\n\n*Logs:*\n" +
-        errorLogs.join("\n")
-      )
-    }
+    // Adonix API
+    const adonixApi = tryApi("Adonix", () =>
+      `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}`
+    )
 
-    ;[mayApi, neoxApi].forEach(p => {
-      if (p !== winner && p.controller) {
-        p.controller.abort()
-      }
-    })
+    // Competencia 🔥
+    const winner = await Promise.any([mayApi, neoxApi, adonixApi])
 
     videoDownloadUrl = winner.url
     calidadElegida = winner.quality
@@ -126,11 +112,11 @@ const handler = async (msg, { conn, text }) => {
         caption: `
 > *𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
-⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
-⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
-⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒𝚘́𝚗:* ${duration}
-⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
-⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝚙𝚒:* ${apiUsada}
+🎵 *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
+🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
+🕑 *𝙳𝚞𝚛𝚊𝚌𝚒𝚘́𝚗:* ${duration}
+📺 *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
+🌐 *𝙰𝚙𝚒:* ${apiUsada}
 
 *» 𝘌𝘕𝘝𝘐𝘈𝘕𝘋𝘖 𝘈𝘜𝘋𝘐𝘖  🎧*
 *» 𝘈𝘎𝘜𝘈𝘙𝘋𝘌 𝘜𝘕 𝘗𝘖𝘊𝘖...*
