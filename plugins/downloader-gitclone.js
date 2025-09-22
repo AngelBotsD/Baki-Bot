@@ -14,7 +14,7 @@ const j = Math.floor(Math.random() * (i + 1));
 }
 }
 try {
-await message.react(rwait)
+await message.react(📄)
 conn.reply(message.chat, `📄 Descargando Su Video, espere un momento...`, message)
 let results = []
 let { data: response } = await axios.get('https://apis-starlights-team.koyeb.app/starlight/tiktoksearch?text=' + text)
