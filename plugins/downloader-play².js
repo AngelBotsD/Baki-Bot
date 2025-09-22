@@ -48,17 +48,18 @@ const handler = async (msg, { conn, text }) => {
       { quoted: msg }
     );
 
-    const endpoint = `https://api-adonix.ultraplus.click/download/ytmp3?apikey=SoyMaycol<3&url=${encodeURIComponent(videoUrl)}`;
+    // Endpoint de la API para audio
+    const endpoint = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=may-0595dca2`;
     const r = await axios.get(endpoint);
 
-    if (!r.data?.result?.url) throw new Error("No se pudo obtener el audio");
+    if (!r.data?.url) throw new Error("No se pudo obtener el audio");
 
     const tmp = path.join(process.cwd(), "tmp");
     if (!fs.existsSync(tmp)) fs.mkdirSync(tmp);
 
     const outFile = path.join(tmp, `${Date.now()}_${title}.mp3`);
 
-    const dl = await axios.get(r.data.result.url, { responseType: "stream" });
+    const dl = await axios.get(r.data.url, { responseType: "stream" });
     await streamPipe(dl.data, fs.createWriteStream(outFile));
 
     const buffer = fs.readFileSync(outFile);
