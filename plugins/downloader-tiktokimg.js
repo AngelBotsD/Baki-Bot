@@ -1,43 +1,146 @@
-import axios from 'axios'
-import cheerio from 'cheerio'
-let handler = async (m, { conn, text: tiktok, args, command, usedPrefix}) => {
-if (!tiktok) throw '🚩 Ingresa un enlace de una publicación de fotos de TikTok junto al comando.'  
-let imagesSent
-if (imagesSent) return
-imagesSent = true    
-try {   
-let tioShadow = await ttimg(tiktok)
-let result = tioShadow?.data
-for (let d of result) {
-  await conn.sendMessage(m.chat, {image: {url: d}}, {quoted: m})
- }
-imagesSent = false
-} catch {
-    imagesSent = false    
-    throw m.react('✖️')
- }
-}
-handler.help = ['tiktokimg *<url>*']
-handler.tags = ['img', 'downloader']
-handler.command = /^(ttimg|tiktokimg)$/i
-export default handler; 
+import fetch from "node-fetch";
+import yts from 'yt-search';
 
-async function ttimg(link) {
-    try {    
-        let url = `https://dlpanda.com/es?url=${link}&token=G7eRpMaa`
-        let response = await axios.get(url)
-        const html = response.data
-        const $ = cheerio.load(html)
-        let imgSrc = [];
-        $('div.col-md-12 > img').each((index, element) => {
-            imgSrc.push($(element).attr('src'))
-        })
-        if (imgSrc.length === 0) {
-            return { data: '🚩 No se encontraron imágenes en el enlace proporcionado.*' }
-        }
-        return { data: imgSrc }
-    } catch (error) {
-        console.lo (error);
-        return { data: '🚩 No se obtuvo respuesta de la página, intenta más tarde.'}
+const handler = async (m, { conn, text, usedPrefix, command }) => {
+  try {
+    console.log('[INFO] Comando recibido:', command, 'Texto:', text);
+
+    if (!text?.trim()) {
+      console.log('[WARN] No se envió texto para buscar');
+      return conn.reply(m.chat, `❀ Envía el nombre o link del vídeo para descargar.`, m);
     }
+
+    await m.react('🕒');
+    console.log('[INFO] Emoji de espera enviado');
+
+    const videoMatch = text.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/);
+    const query = videoMatch ? 'https://youtu.be/' + videoMatch[1] : text;
+    console.log('[INFO] Query detectada:', query);
+
+    const search = await yts(query);
+    console.log('[INFO] Resultados de búsqueda obtenidos');
+
+    const result = videoMatch ? search.videos.find(v => v.videoId === videoMatch[1]) || search.all[0] : search.all[0];
+    if (!result) throw 'ꕥ No se encontraron resultados.';
+
+    const { title, seconds, views, url, thumbnail, author } = result;
+    console.log(`[INFO] Video seleccionado: ${title} | ${seconds}s | ${views} vistas | ${url}`);
+
+    if (seconds > 1620) throw '⚠ El video supera el límite de duración (27 minutos).';
+
+    const vistas = formatViews(views);
+    const duracion = formatDuration(seconds);
+    const canal = author?.name || 'Desconocido';
+
+    if (['play', 'yta', 'ytmp3', 'playaudio'].includes(command)) {
+      console.log('[INFO] Descargando audio...');
+      const audioUrl = await getYtmp3(url);
+      if (!audioUrl) throw '> ⚠ Algo falló, no se pudo obtener el audio.';
+      console.log('[INFO] URL de audio obtenida:', audioUrl);
+
+      const info = `「✦」Descargando *<${title}>*
+
+> ✐ Canal » *${canal}*
+> ⴵ Duración » *${duracion}*
+> ✰ Calidad: *128k*
+> 🜸 Link » ${url}
+> ⟡ Vistas » *${vistas}*`;
+
+      console.log('[INFO] Enviando info de audio...');
+      await conn.sendMessage(m.chat, { image: { url: thumbnail }, caption: info }, { quoted: m });
+
+      console.log('[INFO] Enviando audio...');
+      await conn.sendMessage(m.chat, { audio: { url: audioUrl }, fileName: `${title}.mp3`, mimetype: 'audio/mpeg' }, { quoted: m });
+
+      await m.react('✔️');
+      console.log('[SUCCESS] Audio enviado correctamente');
+
+    } else if (['play2', 'ytv', 'ytmp4', 'mp4'].includes(command)) {
+      console.log('[INFO] Descargando video...');
+      const video = await getYtmp4(url);
+      if (!video?.data) throw '⚠ Algo falló, no se pudo obtener el video.';
+      console.log('[INFO] Video obtenido');
+
+      const info = `「✦」Descargando *<${title}>*
+
+> ✐ Canal » *${canal}*
+> ⴵ Duración » *${duracion}*
+> ✰ Calidad: *360p*
+> 🜸 Link » ${url}
+> ⟡ Vistas » *${vistas}*`;
+
+      console.log('[INFO] Enviando info de video...');
+      await conn.sendMessage(m.chat, { image: { url: thumbnail }, caption: info }, { quoted: m });
+
+      console.log('[INFO] Enviando video...');
+      await conn.sendMessage(m.chat, { video: video.data, fileName: `${title}.mp4`, mimetype: 'video/mp4', caption: '> » Video descargado correctamente.' }, { quoted: m });
+
+      await m.react('✔️');
+      console.log('[SUCCESS] Video enviado correctamente');
+    }
+
+  } catch (e) {
+    await m.react('✖️');
+    console.error('[ERROR]', e);
+    return conn.reply(m.chat, typeof e === 'string' ? e : '⚠ Se produjo un error.\n' + e.message, m);
+  }
+};
+
+handler.command = handler.help = ['play', 'yta', 'ytmp3', 'playaudio', 'play2', 'ytv', 'ytmp4', 'mp4'];
+handler.tags = ['descargas'];
+handler.group = true;
+
+export default handler;
+
+async function getYtmp3(url) {
+  try {
+    console.log('[INFO] Llamando API YTMP3');
+    const endpoint = `https://api-adonix.ultraplus.click/download/ytmp3?apikey=SoyMaycol<3&url=${encodeURIComponent(url)}`;
+    const res = await fetch(endpoint, { redirect: 'follow' }).then(r => r.json());
+    console.log('[INFO] Respuesta API YTMP3:', res);
+    if (!res?.data?.url) return null;
+    return res.data.url;
+  } catch (err) {
+    console.error('[ERROR] getYtmp3', err);
+    return null;
+  }
+}
+
+async function getYtmp4(url) {
+  try {
+    console.log('[INFO] Llamando API YTMP4');
+    const endpoint = `https://api-adonix.ultraplus.click/download/ytmp4?apikey=SoyMaycol<3&url=${encodeURIComponent(url)}`;
+    const res = await fetch(endpoint).then(r => r.json());
+    console.log('[INFO] Respuesta API YTMP4:', res);
+    if (!res?.data?.url) return null;
+
+    const finalUrl = await getFinalUrl(res.data.url);
+    console.log('[INFO] URL final del video:', finalUrl);
+
+    const videoBuffer = await fetch(finalUrl).then(r => r.arrayBuffer());
+    return { data: Buffer.from(videoBuffer), url: finalUrl };
+  } catch (err) {
+    console.error('[ERROR] getYtmp4', err);
+    return null;
+  }
+}
+
+async function getFinalUrl(url) {
+  console.log('[INFO] Resolviendo URL final...');
+  const res = await fetch(url, { method: 'HEAD', redirect: 'follow' });
+  return res.url || url;
+}
+
+function formatViews(views) {
+  if (views === undefined) return "No disponible";
+  if (views >= 1_000_000_000) return `${(views / 1_000_000_000).toFixed(1)} B (${views.toLocaleString()})`;
+  if (views >= 1_000_000) return `${(views / 1_000_000).toFixed(1)} M (${views.toLocaleString()})`;
+  if (views >= 1_000) return `${(views / 1_000).toFixed(1)} K (${views.toLocaleString()})`;
+  return views.toString();
+}
+
+function formatDuration(seconds) {
+  const min = Math.floor(seconds / 60);
+  const sec = seconds % 60;
+  return `${min} minutos ${sec} segundos`;
 }
