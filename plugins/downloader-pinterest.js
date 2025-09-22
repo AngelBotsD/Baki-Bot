@@ -17,7 +17,6 @@ msg.key.remoteJid,
 )
 }
 
-// validar que sea un link de youtube
 if (!/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(text.trim())) {
 return conn.sendMessage(
 msg.key.remoteJid,
@@ -96,10 +95,9 @@ try {
 
 videoDownloadUrl = winner.url  
 calidadElegida = winner.quality  
-apiUsada = winner.api  
+apiUsada = winner.api
 
-// obtener info del video con yt-search para título/artista
-const info = await yts({ videoId: videoUrl.split("v=")[1] || videoUrl.split("/").pop() })
+const info = await yts(videoUrl)
 const videoInfo = info.videos?.[0] || {}
 const title = videoInfo.title || "Desconocido"
 const artista = videoInfo.author?.name || "Desconocido"
@@ -135,6 +133,8 @@ await conn.sendMessage(
     caption: `
 
 > 𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁
+
+
 
 ⭒ ִֶָ७ ꯭🎵˙⋆｡ - 𝚃𝚒́𝚝𝚞𝚕𝚘: ${title}
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - 𝙰𝚛𝚝𝚒𝚜𝚝𝚊: ${artista}
