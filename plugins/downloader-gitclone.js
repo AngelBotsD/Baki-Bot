@@ -7,7 +7,7 @@ const {
 
 let handler = async (message, { conn, text }) => {
   const avatar = 'https://qu.ax/XKFEL.jpg' 
-  const dev = 'Black Clover MD' 
+  const dev = 'xd' 
   const redes = 'https://tusitio.com' 
 
   if (!text) {
