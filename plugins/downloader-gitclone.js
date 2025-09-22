@@ -7,7 +7,7 @@ let handler = async (m, { conn, text, command, usedPrefix }) => {
     // Aviso inicial
     await conn.sendMessage(m.chat, { text: "⏳ Buscando y descargando videos, espere un momento..." }, { quoted: m })
 
-    let url = `https://tu_api/tiktoks?query=${encodeURIComponent(text)}&apikey=may-0595dca2`
+    let url = let url = `https://mayapi.ooguy.com/tiktoks?query=${encodeURIComponent(text)}&apikey=may-0595dca2`
     let res = await axios.get(url)
 
     if (!res.data || !res.data.result || res.data.result.length === 0) {
