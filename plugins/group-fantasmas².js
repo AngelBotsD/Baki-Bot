@@ -41,9 +41,7 @@ let handler = async (m, { conn, text, participants, command }) => {
 // Solo acepta sin prefijo
 handler.customPrefix = /^(verfantasmas|fantasmas|sider|fankick)$/i
 handler.command = new RegExp;
-handler.explicit = true
 handler.admin = true
-handler.botAdmin = true
 handler.group = true
 handler.help = ['fantasmas', 'fankick']
 handler.tags = ['group']
