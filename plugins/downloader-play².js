@@ -2,15 +2,12 @@ import axios from "axios";
 import yts from "yt-search";
 import fs from "fs";
 import path from "path";
-import ffmpeg from "fluent-ffmpeg";
 import { promisify } from "util";
 import { pipeline } from "stream";
 
 const streamPipe = promisify(pipeline);
 
 const handler = async (msg, { conn, text }) => {
-  const pref = global.prefixes?.[0] || ".";
-
   if (!text || !text.trim()) {
     return conn.sendMessage(
       msg.key.remoteJid,
@@ -51,27 +48,18 @@ const handler = async (msg, { conn, text }) => {
       { quoted: msg }
     );
 
-    const api = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`;
-    const r = await axios.get(api);
-    if (!r.data?.status || !r.data.data?.url) throw new Error("No se pudo obtener el audio");
+    const endpoint = `https://api-adonix.ultraplus.click/download/ytmp3?apikey=SoyMaycol<3&url=${encodeURIComponent(videoUrl)}`;
+    const r = await axios.get(endpoint);
+
+    if (!r.data?.result?.url) throw new Error("No se pudo obtener el audio");
 
     const tmp = path.join(process.cwd(), "tmp");
     if (!fs.existsSync(tmp)) fs.mkdirSync(tmp);
-    const inFile = path.join(tmp, `${Date.now()}_in.m4a`);
-    const outFile = path.join(tmp, `${Date.now()}_out.mp3`);
 
-    const dl = await axios.get(r.data.data.url, { responseType: "stream" });
-    await streamPipe(dl.data, fs.createWriteStream(inFile));
+    const outFile = path.join(tmp, `${Date.now()}_${title}.mp3`);
 
-    await new Promise((res, rej) =>
-      ffmpeg(inFile)
-        .audioCodec("libmp3lame")
-        .audioBitrate("128k")
-        .format("mp3")
-        .save(outFile)
-        .on("end", res)
-        .on("error", rej)
-    );
+    const dl = await axios.get(r.data.result.url, { responseType: "stream" });
+    await streamPipe(dl.data, fs.createWriteStream(outFile));
 
     const buffer = fs.readFileSync(outFile);
 
@@ -86,7 +74,6 @@ const handler = async (msg, { conn, text }) => {
       { quoted: msg }
     );
 
-    fs.unlinkSync(inFile);
     fs.unlinkSync(outFile);
 
     await conn.sendMessage(msg.key.remoteJid, {
