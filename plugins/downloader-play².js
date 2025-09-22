@@ -38,20 +38,11 @@ const handler = async (msg, { conn, text }) => {
 
   try {
     const infoMsg = `
-> *𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
+> *𝚈𝙾𝚄𝚃𝚄𝙱𝙴 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
-⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
-⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
-⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒𝚘́𝚗:* ${duration}
-⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* 128kbps
-⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝚙𝚒:* mayapi.ooguy.com
-
-*» 𝘌𝘕𝘝𝘐𝘈𝘕𝘋𝘖 𝘈𝘜𝘋𝘐𝘖  🎧*
-*» 𝘈𝘎𝘜𝘈𝘙𝘋𝘌 𝘜𝘕 𝘗𝘖𝘊𝘖...*
-
-*⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻*
-
-> \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 ba.𝗑𝗒𝗓\`\`\`
+🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${title}
+🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
+🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
 `.trim();
 
     await conn.sendMessage(
@@ -60,23 +51,18 @@ const handler = async (msg, { conn, text }) => {
       { quoted: msg }
     );
 
-    // 🚀 Usamos tu API mayapi
-    const api = `https://mayapi.ooguy.com/api/ytmp3?url=${encodeURIComponent(videoUrl)}&apikey=may-0595dca2`;
+    const api = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`;
     const r = await axios.get(api);
-
-    if (!r.data?.success || !r.data.result?.download_url) {
-      throw new Error("No se pudo obtener el audio");
-    }
+    if (!r.data?.status || !r.data.data?.url) throw new Error("No se pudo obtener el audio");
 
     const tmp = path.join(process.cwd(), "tmp");
     if (!fs.existsSync(tmp)) fs.mkdirSync(tmp);
     const inFile = path.join(tmp, `${Date.now()}_in.m4a`);
     const outFile = path.join(tmp, `${Date.now()}_out.mp3`);
 
-    const dl = await axios.get(r.data.result.download_url, { responseType: "stream" });
+    const dl = await axios.get(r.data.data.url, { responseType: "stream" });
     await streamPipe(dl.data, fs.createWriteStream(inFile));
 
-    // Convertimos a mp3
     await new Promise((res, rej) =>
       ffmpeg(inFile)
         .audioCodec("libmp3lame")
