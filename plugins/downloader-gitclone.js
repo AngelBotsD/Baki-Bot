@@ -1,19 +1,12 @@
 import axios from 'axios'
-const { proto, generateWAMessageFromContent } = (await import("@whiskeysockets/baileys")).default
+const { proto } = (await import("@whiskeysockets/baileys")).default
 
 let handler = async (message, { conn, text, usedPrefix, command }) => {
     if (!text) 
         return conn.reply(message.chat, `📄 Por favor, ingrese lo que desea buscar en TikTok.`, message)
 
-    const rwait = '⏳'  // emoji de esperando
-    const done = '✅'   // emoji de completado
-    const author = 'Su Bot' // texto para el footer
-
-    // Función para crear videoMessage
-    async function createVideoMessage(url) {
-        const { videoMessage } = await generateWAMessageContent({ video: { url } }, { upload: conn.waUploadToServer })
-        return videoMessage
-    }
+    const rwait = '⏳'
+    const done = '✅'
 
     // Función para mezclar un array
     function shuffleArray(array) {
@@ -25,49 +18,34 @@ let handler = async (message, { conn, text, usedPrefix, command }) => {
 
     try {
         await message.react(rwait)
-        await conn.reply(message.chat, `📄 Descargando su video, espere un momento...`, message)
+        await conn.reply(message.chat, `📄 Buscando y descargando videos, espere un momento...`, message)
 
-        // Consulta a la API
+        // Llamada a la API
         const { data: response } = await axios.get(`https://apis-starlights-team.koyeb.app/starlight/tiktoksearch?text=${encodeURIComponent(text)}`)
         let searchResults = response.data
 
-        shuffleArray(searchResults)
-        let selectedResults = searchResults.slice(0, 7) // tomar hasta 7 resultados
+        if (!searchResults || searchResults.length === 0)
+            return conn.reply(message.chat, `❌ No se encontraron resultados para "${text}"`, message)
 
-        // Construir tarjetas del carousel
-        let results = []
+        shuffleArray(searchResults)
+        const selectedResults = searchResults.slice(0, 7) // máximo 7 videos
+
+        // Enviar cada video individualmente
         for (let result of selectedResults) {
-            results.push({
-                body: proto.Message.InteractiveMessage.Body.fromObject({ text: null }),
-                footer: proto.Message.InteractiveMessage.Footer.fromObject({ text: author }),
-                header: proto.Message.InteractiveMessage.Header.fromObject({
-                    title: result.title || '',
-                    hasMediaAttachment: true,
-                    videoMessage: await createVideoMessage(result.nowm)
-                }),
-                nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.fromObject({ buttons: [] })
-            })
+            await conn.sendMessage(
+                message.chat,
+                {
+                    video: { url: result.nowm },
+                    caption: `📄 ${result.title}\n🔗 TikTok: ${result.url || 'No disponible'}`
+                },
+                { quoted: message }
+            )
         }
 
-        // Crear mensaje de carousel
-        const responseMessage = generateWAMessageFromContent(message.chat, {
-            viewOnceMessage: {
-                message: {
-                    messageContextInfo: { deviceListMetadata: {}, deviceListMetadataVersion: 2 },
-                    interactiveMessage: proto.Message.InteractiveMessage.fromObject({
-                        body: proto.Message.InteractiveMessage.Body.create({ text: `📄 Resultado de: ${text}` }),
-                        footer: proto.Message.InteractiveMessage.Footer.create({ text: 'TikTok - Búsqueda' }),
-                        header: proto.Message.InteractiveMessage.Header.create({ hasMediaAttachment: false }),
-                        carouselMessage: proto.Message.InteractiveMessage.CarouselMessage.fromObject({ cards: results })
-                    })
-                }
-            }
-        }, { quoted: message })
-
         await message.react(done)
-        await conn.relayMessage(message.chat, responseMessage.message, { messageId: responseMessage.key.id })
 
     } catch (error) {
+        console.error(error)
         await conn.reply(message.chat, `❌ Ocurrió un error:\n${error.toString()}`, message)
     }
 }
