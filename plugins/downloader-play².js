@@ -46,7 +46,7 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
 
     await conn.sendMessage(m.chat, { audio: { url: audioUrl }, fileName: `${title}.mp3`, mimetype: 'audio/mpeg' }, { quoted: m });
 
-    await m.react('✔️');
+    await m.react('✅');
 
   } catch (e) {
     await m.react('✖️');
