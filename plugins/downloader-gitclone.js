@@ -39,7 +39,7 @@ deviceListMetadata: {},
 deviceListMetadataVersion: 2
 },
 interactiveMessage: proto.Message.InteractiveMessage.fromObject({
-body: proto.Message.InteractiveMessage.Body.create({ text: `${emoji} Resultado de: ` + text }),
+body: proto.Message.InteractiveMessage.Body.create({ text: `📄 Resultado de: ` + text }),
 footer: proto.Message.InteractiveMessage.Footer.create({ text: 'Tiktok - Busqueda' }),
 header: proto.Message.InteractiveMessage.Header.create({ hasMediaAttachment: false }),
 carouselMessage: proto.Message.InteractiveMessage.CarouselMessage.fromObject({ cards: [...results] })})}}
