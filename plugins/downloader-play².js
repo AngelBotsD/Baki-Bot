@@ -54,7 +54,7 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
   }
 };
 
-handler.command = handler.help = ['play'];
+handler.command = handler.help = ['l'];
 handler.tags = ['descargas'];
 handler.group = true;
 
