@@ -1,95 +1,97 @@
-import axios from "axios";
-import yts from "yt-search";
-import fs from "fs";
-import path from "path";
-import { promisify } from "util";
-import { pipeline } from "stream";
+import fetch from "node-fetch";
+import yts from 'yt-search';
 
-const streamPipe = promisify(pipeline);
-
-const handler = async (msg, { conn, text }) => {
-  if (!text || !text.trim()) {
-    return conn.sendMessage(
-      msg.key.remoteJid,
-      { text: `*💽 𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝙴𝚕 𝙽𝚘𝚖𝚋𝚛𝚎 𝚍𝚎 𝚊𝚕𝚐𝚞𝚗𝚊 𝙲𝚊𝚗𝚌𝚒𝚘𝚗*` },
-      { quoted: msg }
-    );
-  }
-
-  await conn.sendMessage(msg.key.remoteJid, {
-    react: { text: "🕒", key: msg.key }
-  });
-
-  const res = await yts(text);
-  const video = res.videos[0];
-  if (!video) {
-    return conn.sendMessage(
-      msg.key.remoteJid,
-      { text: "❌ Sin resultados." },
-      { quoted: msg }
-    );
-  }
-
-  const { url: videoUrl, title, timestamp: duration, author, thumbnail } = video;
-  const artista = author.name;
-
+const handler = async (m, { conn, text, usedPrefix, command }) => {
   try {
-    const infoMsg = `
-> *𝚈𝙾𝚄𝚃𝚄𝙱𝙴 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
+    console.log('[INFO] Comando recibido:', command, 'Texto:', text);
 
-🎵 *𝚃𝚒𝚝𝚞𝚕𝚘:* ${title}
-🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
-🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
-`.trim();
+    if (!text?.trim()) {
+      console.log('[WARN] No se envió texto para buscar');
+      return conn.reply(m.chat, `❀ Envía el nombre o link del vídeo para descargar.`, m);
+    }
 
-    await conn.sendMessage(
-      msg.key.remoteJid,
-      { image: { url: thumbnail }, caption: infoMsg },
-      { quoted: msg }
-    );
+    await m.react('🕒');
+    console.log('[INFO] Emoji de espera enviado');
 
-    // Endpoint de la API para audio
-    const endpoint = `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=may-0595dca2`;
-    const r = await axios.get(endpoint);
+    const videoMatch = text.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/);
+    const query = videoMatch ? 'https://youtu.be/' + videoMatch[1] : text;
+    console.log('[INFO] Query detectada:', query);
 
-    if (!r.data?.url) throw new Error("No se pudo obtener el audio");
+    const search = await yts(query);
+    console.log('[INFO] Resultados de búsqueda obtenidos');
 
-    const tmp = path.join(process.cwd(), "tmp");
-    if (!fs.existsSync(tmp)) fs.mkdirSync(tmp);
+    const result = videoMatch ? search.videos.find(v => v.videoId === videoMatch[1]) || search.all[0] : search.all[0];
+    if (!result) throw 'ꕥ No se encontraron resultados.';
 
-    const outFile = path.join(tmp, `${Date.now()}_${title}.mp3`);
+    const { title, seconds, views, url, thumbnail, author } = result;
+    console.log(`[INFO] Video seleccionado: ${title} | ${seconds}s | ${views} vistas | ${url}`);
 
-    const dl = await axios.get(r.data.url, { responseType: "stream" });
-    await streamPipe(dl.data, fs.createWriteStream(outFile));
+    if (seconds > 1620) throw '⚠ El video supera el límite de duración (27 minutos).';
 
-    const buffer = fs.readFileSync(outFile);
+    const vistas = formatViews(views);
+    const duracion = formatDuration(seconds);
+    const canal = author?.name || 'Desconocido';
 
-    await conn.sendMessage(
-      msg.key.remoteJid,
-      {
-        audio: buffer,
-        mimetype: "audio/mpeg",
-        fileName: `${title}.mp3`,
-        ptt: false
-      },
-      { quoted: msg }
-    );
+    // Solo audio - comando .play
+    console.log('[INFO] Descargando audio...');
+    const audioUrl = await getYtmp3(url);
+    if (!audioUrl) throw '> ⚠ Algo falló, no se pudo obtener el audio.';
+    console.log('[INFO] URL de audio obtenida:', audioUrl);
 
-    fs.unlinkSync(outFile);
+    const info = `「✦」Descargando *<${title}>*
 
-    await conn.sendMessage(msg.key.remoteJid, {
-      react: { text: "✅", key: msg.key }
-    });
+> ✐ Canal » *${canal}*
+> ⴵ Duración » *${duracion}*
+> ✰ Calidad: *128k*
+> 🜸 Link » ${url}
+> ⟡ Vistas » *${vistas}*`;
+
+    console.log('[INFO] Enviando info de audio...');
+    await conn.sendMessage(m.chat, { image: { url: thumbnail }, caption: info }, { quoted: m });
+
+    console.log('[INFO] Enviando audio...');
+    await conn.sendMessage(m.chat, { audio: { url: audioUrl }, fileName: `${title}.mp3`, mimetype: 'audio/mpeg' }, { quoted: m });
+
+    await m.react('✔️');
+    console.log('[SUCCESS] Audio enviado correctamente');
+
   } catch (e) {
-    console.error(e);
-    await conn.sendMessage(
-      msg.key.remoteJid,
-      { text: "⚠️ Error al descargar el audio." },
-      { quoted: msg }
-    );
+    await m.react('✖️');
+    console.error('[ERROR]', e);
+    return conn.reply(m.chat, typeof e === 'string' ? e : '⚠ Se produjo un error.\n' + e.message, m);
   }
 };
 
-handler.command = ["play"];
+handler.command = handler.help = ['play'];
+handler.tags = ['descargas'];
+handler.group = true;
 
 export default handler;
+
+async function getYtmp3(url) {
+  try {
+    console.log('[INFO] Llamando API YTMP3');
+    const endpoint = `https://api-adonix.ultraplus.click/download/ytmp3?apikey=SoyMaycol<3&url=${encodeURIComponent(url)}`;
+    const res = await fetch(endpoint, { redirect: 'follow' }).then(r => r.json());
+    console.log('[INFO] Respuesta API YTMP3:', res);
+    if (!res?.data?.url) return null;
+    return res.data.url;
+  } catch (err) {
+    console.error('[ERROR] getYtmp3', err);
+    return null;
+  }
+}
+
+function formatViews(views) {
+  if (views === undefined) return "No disponible";
+  if (views >= 1_000_000_000) return `${(views / 1_000_000_000).toFixed(1)} B (${views.toLocaleString()})`;
+  if (views >= 1_000_000) return `${(views / 1_000_000).toFixed(1)} M (${views.toLocaleString()})`;
+  if (views >= 1_000) return `${(views / 1_000).toFixed(1)} K (${views.toLocaleString()})`;
+  return views.toString();
+}
+
+function formatDuration(seconds) {
+  const min = Math.floor(seconds / 60);
+  const sec = seconds % 60;
+  return `${min} minutos ${sec} segundos`;
+}
