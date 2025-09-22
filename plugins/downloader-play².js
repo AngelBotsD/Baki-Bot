@@ -20,7 +20,7 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
     const duracion = formatDuration(seconds);
     const artista = author?.name || 'Desconocido';
     const calidad = '1080p'; // fijo como en tu ejemplo
-    const apiUsed = 'NeoxR'; // fijo como en tu ejemplo
+    const apiUsed = 'MyAPI';
 
     const info = `> *𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
