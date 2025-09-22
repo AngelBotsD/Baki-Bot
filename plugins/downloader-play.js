@@ -48,7 +48,7 @@ const handler = async (msg, { conn, text }) => {
           for (const q of posibles) {
             const apiUrl = urlBuilder(q)
             const r = await axios.get(apiUrl, {
-              timeout: 60000,
+              timeout: 80000,
               signal: controller.signal
             })
             if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
