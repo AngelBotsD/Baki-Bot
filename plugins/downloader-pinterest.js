@@ -17,7 +17,9 @@ const handler = async (msg, { conn, text }) => {
     )
   }
 
-  if (!text.includes("youtube.com") && !text.includes("youtu.be")) {
+  // Validar que sea un link de YouTube
+  const ytRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/i
+  if (!ytRegex.test(text.trim())) {
     return conn.sendMessage(
       msg.key.remoteJid,
       { text: "❌ Ingresa un link válido de YouTube." },
@@ -30,56 +32,61 @@ const handler = async (msg, { conn, text }) => {
   })
 
   const videoUrl = text.trim()
+
+  // ya no usamos búsqueda, porque el user pasó link
+  const res = await yts({ videoId: videoUrl.split("v=")[1] || videoUrl.split("/").pop() })
+  const video = res ? res : null
+  if (!video) {
+    return conn.sendMessage(
+      msg.key.remoteJid,
+      { text: "❌ No se pudo obtener información del video." },
+      { quoted: msg }
+    )
+  }
+
+  const { title, timestamp: duration, author } = video
+  const artista = author?.name || "Desconocido"
+  const posibles = ["1080p", "720p", "480p", "360p"]
+
   let videoDownloadUrl = null
   let calidadElegida = "Desconocida"
   let apiUsada = "Desconocida"
   let errorLogs = []
-  let title = "Desconocido"
-  let duration = "Desconocida"
-  let artista = "Desconocido"
 
   try {
-    // Obtener info del video usando yts
-    const res = await yts(videoUrl)
-    const video = res.videos[0]
-    if (video) {
-      title = video.title
-      duration = video.timestamp
-      artista = video.author.name
-    }
-
     const tryApi = (apiName, urlBuilder) => {
       return new Promise(async (resolve, reject) => {
         const controller = new AbortController()
         try {
-          const apiUrl = urlBuilder()
-          const r = await axios.get(apiUrl, {
-            timeout: 60000,
-            signal: controller.signal
-          })
-          if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
-            resolve({
-              url: r.data.result?.url || r.data.data?.url,
-              quality: r.data.result?.quality || r.data.data?.quality || "Desconocida",
-              api: apiName,
-              controller
+          for (const q of posibles) {
+            const apiUrl = urlBuilder(q)
+            const r = await axios.get(apiUrl, {
+              timeout: 60000,
+              signal: controller.signal
             })
-            return
+            if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
+              resolve({
+                url: r.data.result?.url || r.data.data?.url,
+                quality: r.data.result?.quality || r.data.data?.quality || q,
+                api: apiName,
+                controller
+              })
+              return
+            }
           }
           reject(new Error(`${apiName}: No entregó un URL válido`))
         } catch (err) {
-          errorLogs.push(`${apiName}: ${err.message}`)
           reject(new Error(`${apiName}: ${err.message}`))
         }
       })
     }
 
-    const mayApi = tryApi("MayAPI", () =>
-      `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&apikey=may-0595dca2`
+    const mayApi = tryApi("MayAPI", q =>
+      `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&quality=${q}&apikey=may-0595dca2`
     )
 
-    const neoxApi = tryApi("NeoxR", () =>
-      `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&apikey=russellxz`
+    const neoxApi = tryApi("NeoxR", q =>
+      `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=russellxz`
     )
 
     let winner
@@ -132,11 +139,18 @@ const handler = async (msg, { conn, text }) => {
         caption: `
 > *𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
-🎵 *𝚃í𝚝𝚞𝚕𝚘:* ${title}
-🎤 *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
-🕑 *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
-📺 *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
-🌐 *𝙰𝚙𝚒:* ${apiUsada}
+⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
+⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
+⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒𝚘́𝚗:* ${duration}
+⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
+⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝚙𝚒:* ${apiUsada}
+
+*» 𝘌𝘕𝘝𝘐𝘈𝘕𝘋𝘖 𝘈𝘜𝘋𝘐𝘖  🎧*
+*» 𝘈𝘎𝘜𝘈𝘙𝘋𝘌 𝘜𝘕 𝘗𝘖𝘊𝘖...*
+
+*⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻*
+
+> \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 ba.𝗑𝗒𝗓\`\`\`
 `.trim(),
         supportsStreaming: true,
         contextInfo: { isHd: true }
