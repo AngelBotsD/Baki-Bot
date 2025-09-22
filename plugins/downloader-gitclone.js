@@ -5,9 +5,10 @@ let handler = async (m, { conn, text, command, usedPrefix }) => {
 
   try {
     // Aviso inicial
-    await conn.sendMessage(m.chat, { text: "⏳ Buscando y descargando videos, espere un momento..." }, { quoted: m })
+    await conn.sendMessage(m.chat, { text: "📂 Descargando sus videos, espere un momento..." }, { quoted: m })
 
-    let url = let url = `https://mayapi.ooguy.com/tiktoks?query=${encodeURIComponent(text)}&apikey=may-0595dca2`
+    // API URL
+    let url = `https://mayapi.ooguy.com/tiktoks?query=${encodeURIComponent(text)}&apikey=may-0595dca2`
     let res = await axios.get(url)
 
     if (!res.data || !res.data.result || res.data.result.length === 0) {
@@ -17,6 +18,11 @@ let handler = async (m, { conn, text, command, usedPrefix }) => {
     // Tomamos solo los primeros 7 resultados
     let results = res.data.result.slice(0, 7)
 
+    // Aviso de búsqueda
+    await conn.sendMessage(m.chat, { 
+      text: `🔎 Resultado de: *${text}*\nTiktok - Busqueda` 
+    }, { quoted: m })
+
     for (let video of results) {
       let titulo = video.title || "Sin título"
       let autor = video.author || "Desconocido"
@@ -25,9 +31,9 @@ let handler = async (m, { conn, text, command, usedPrefix }) => {
 
       if (!link) continue
 
-      let caption = `🎵 *TikTok Search*\n\n📌 *Título:* ${titulo}\n👤 *Autor:* ${autor}\n${hashtags}`
-      
-      // Enviar el video directamente
+      let caption = `${hashtags}`
+
+      // Enviar cada video con su caption (hashtags)
       await conn.sendMessage(m.chat, {
         video: { url: link },
         caption: caption
