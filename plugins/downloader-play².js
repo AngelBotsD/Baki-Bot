@@ -146,7 +146,7 @@ const handler = async (msg, { conn, text }) => {
       { quoted: msg }
     )
 
-    await new Promise(res => setTimeout(res, 1000))
+    await new Promise(res => setTimeout(res, 2000))
 
     await conn.sendMessage(
       msg.key.remoteJid,
