@@ -95,7 +95,7 @@ export default handler;
 async function getYtmp3(url) {
   try {
     console.log('[INFO] Llamando API YTMP3');
-    const endpoint = `https://api-adonix.ultraplus.click/download/ytmp3?apikey=SoyMaycol<3&url=${encodeURIComponent(url)}`;
+    const endpoint = `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(url)}`;
     const res = await fetch(endpoint, { redirect: 'follow' }).then(r => r.json());
     console.log('[INFO] Respuesta API YTMP3:', res);
     if (!res?.data?.url) return null;
