@@ -1,9 +1,9 @@
 import axios from "axios"
+import yts from "yt-search"
 import fs from "fs"
 import path from "path"
 import { promisify } from "util"
 import { pipeline } from "stream"
-import ytdl from "ytdl-core"
 
 const streamPipe = promisify(pipeline)
 const MAX_FILE_SIZE = 60 * 1024 * 1024
@@ -37,46 +37,42 @@ const handler = async (msg, { conn, text }) => {
   let apiUsada = "Desconocida"
   let errorLogs = []
 
-  // Metadata confiable
-  let title = "Desconocido"
-  let artista = "Desconocido"
-  let duration = "Desconocida"
-
-  try {
-    const info = await ytdl.getInfo(videoUrl)
-    title = info.videoDetails.title || "Desconocido"
-    artista = info.videoDetails.author?.name || "Desconocido"
-    duration = new Date(info.videoDetails.lengthSeconds * 1000)
-                 .toISOString().substr(11, 8) // hh:mm:ss
-  } catch (err) {
-    console.error("Error obteniendo metadata:", err)
-  }
-
   try {
     const tryApi = (apiName, urlBuilder) => {
       return new Promise(async (resolve, reject) => {
-        const controller = new AbortController()
-        try {
-          for (const q of posibles) {
-            const apiUrl = urlBuilder(q)
-            const r = await axios.get(apiUrl, {
-              timeout: 60000,
-              signal: controller.signal
-            })
-            if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
-              resolve({
-                url: r.data.result?.url || r.data.data?.url,
-                quality: r.data.result?.quality || r.data.data?.quality || q,
-                api: apiName,
-                controller
+        let intentos = 0
+        const maxIntentos = 2
+        const attempt = async () => {
+          intentos++
+          const controller = new AbortController()
+          try {
+            for (const q of posibles) {
+              const apiUrl = urlBuilder(q)
+              const r = await axios.get(apiUrl, {
+                timeout: 60000,
+                signal: controller.signal
               })
-              return
+              if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
+                resolve({
+                  url: r.data.result?.url || r.data.data?.url,
+                  quality: r.data?.result?.quality || r.data?.data?.quality || q,
+                  api: apiName,
+                  controller
+                })
+                return
+              }
+            }
+            throw new Error(`${apiName}: No entregó un URL válido`)
+          } catch (err) {
+            if (intentos < maxIntentos) {
+              console.log(`${apiName} abortado, reintentando... (${intentos}/${maxIntentos})`)
+              await attempt() // reintento silencioso
+            } else {
+              reject(new Error(`${apiName}: ${err.message}`))
             }
           }
-          reject(new Error(`${apiName}: No entregó un URL válido`))
-        } catch (err) {
-          reject(new Error(`${apiName}: ${err.message}`))
         }
+        attempt()
       })
     }
 
@@ -112,6 +108,12 @@ const handler = async (msg, { conn, text }) => {
     calidadElegida = winner.quality
     apiUsada = winner.api
 
+    const info = await yts(videoUrl)
+    const videoInfo = info.videos?.[0] || {}
+    const title = videoInfo.title || "Desconocido"
+    const artista = videoInfo.author?.name || "Desconocido"
+    const duration = videoInfo.timestamp || "Desconocida"
+
     const tmp = path.join(process.cwd(), "tmp")
     if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
     const file = path.join(tmp, `${Date.now()}_vid.mp4`)
@@ -140,14 +142,13 @@ const handler = async (msg, { conn, text }) => {
         mimetype: "video/mp4",
         fileName: `${title}.mp4`,
         caption: `
+> 𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁
 
-> *𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
-
-⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃ítulo:* ${title}
-⭒ ִֶָ७ ꯭🎤˙⋆｡ - *Artista:* ${artista}
-⭒ ִֶָ७ ꯭🕑˙⋆｡ - *Duración:* ${duration}
-⭒ ִֶָ७ ꯭📺˙⋆｡ - *Calidad:* ${calidadElegida}
-⭒ ִֶָ७ ꯭🌐˙⋆｡ - *Api:* ${apiUsada}
+⭒ ִֶָ७ ꯭🎵˙⋆｡ - 𝚃𝚒́𝚝𝚞𝚕𝚘: ${title}
+⭒ ִֶָ७ ꯭🎤˙⋆｡ - 𝙰𝚛𝚝𝚒𝚜𝚝𝚊: ${artista}
+⭒ ִֶָ७ ꯭🕑˙⋆｡ - 𝙳𝚞𝚛𝚊𝚌𝚒𝚘́𝚗: ${duration}
+⭒ ִֶָ७ ꯭📺˙⋆｡ - 𝙲𝚊𝚕𝚒𝚍𝚊𝚍: ${calidadElegida}
+⭒ ִֶָ७ ꯭🌐˙⋆｡ - 𝙰𝚙𝚒: ${apiUsada}
 
 » 𝘌𝘕𝘝𝘐𝘈𝘕𝘋𝘖 𝘈𝘜𝘋𝘐𝘖  🎧
 » 𝘈𝘎𝘜𝘈𝘙𝘋𝘌 𝘜𝘕 𝘗𝘖𝘊𝘖...
@@ -155,7 +156,7 @@ const handler = async (msg, { conn, text }) => {
 ⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
 
 > \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 ba.𝗑𝗒𝗓\`\`\`
-        `.trim(),
+`.trim(),
         supportsStreaming: true,
         contextInfo: { isHd: true }
       },
