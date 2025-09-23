@@ -69,10 +69,10 @@ const handler = async (msg, { conn, text }) => {
         const neoxApi = tryApi("NeoxR", q =>
           `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`
         )
-        const adonixApi = tryApi("AdonixAPI", q =>
+        const adonixApi = tryApi("Dash", q =>
           `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}`
         )
-        const adofreeApi = tryApi("AdofreeAPI", q =>
+        const adofreeApi = tryApi("Delay", q =>
           `http://173.208.192.170/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}`
         )
 
