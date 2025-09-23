@@ -66,23 +66,23 @@ const handler = async (msg, { conn, text }) => {
         const mayApi = tryApi("MayAPI", q =>
           `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=may-0595dca2`
         )
-        const neoxApi = tryApi("NeoxR", q =>
-          `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`
-        )
         const adonixApi = tryApi("AdonixAPI", q =>
           `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}`
         )
         const adofreeApi = tryApi("fw Api", q =>
           `http://173.208.192.170/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}`
         )
+        const neoxApi = tryApi("NeoxR", q =>
+          `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`
+        )
 
-        winner = await Promise.any([mayApi, neoxApi, adonixApi, adofreeApi])
-        ;[mayApi, neoxApi, adonixApi, adofreeApi].forEach(p => {
+        // Neox al final para que solo se use si las otras fallan
+        winner = await Promise.any([mayApi, adonixApi, adofreeApi, neoxApi])
+        ;[mayApi, adonixApi, adofreeApi, neoxApi].forEach(p => {
           if (p !== winner && p.controller) p.controller.abort()
         })
       } catch (e) {
         if (intentos >= 2) throw new Error("No se pudo obtener el audio después de 2 intentos.")
-        // reintenta automáticamente si falla la primera
       }
     }
 
@@ -104,11 +104,41 @@ const handler = async (msg, { conn, text }) => {
     calidadElegida = winner.quality
     apiUsada = winner.api
 
+    // ---- Enviar la info de una vez ----
+    await conn.sendMessage(
+      msg.key.remoteJid,
+      {
+        image: { url: thumbnail },
+        caption: `
+> *𝙰𝚄𝙳𝙸𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
+
+⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
+⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
+⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
+⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
+⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝚙𝚒:* ${apiUsada}
+
+⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
+
+> \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 𝗁𝖾𝗋𝗇𝖺𝗇𝖽𝖾𝗓.𝗑𝗒𝗓\`\`\`
+        `.trim()
+      },
+      { quoted: msg }
+    )
+
+    // ---- Descargar audio (manejo especial para Neox) ----
     const tmp = path.join(process.cwd(), "tmp")
     if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
     const file = path.join(tmp, `${Date.now()}_audio.mp3`)
 
-    const dl = await axios.get(audioDownloadUrl, { responseType: "stream", timeout: 0 })
+    let dl
+    if (apiUsada === "NeoxR") {
+      // Si es Neox, lo bajo siempre como stream
+      dl = await axios.get(audioDownloadUrl, { responseType: "stream", timeout: 0 })
+    } else {
+      dl = await axios.get(audioDownloadUrl, { responseType: "stream", timeout: 0 })
+    }
+
     let totalSize = 0
     dl.data.on("data", chunk => {
       totalSize += chunk.length
@@ -123,32 +153,7 @@ const handler = async (msg, { conn, text }) => {
       throw new Error("El archivo excede el límite de 60 MB permitido por WhatsApp.")
     }
 
-    await conn.sendMessage(
-      msg.key.remoteJid,
-      {
-        image: { url: thumbnail },
-        caption: `
-> *𝙰𝚄𝙳𝙸𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
-
-⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
-⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
-⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
-⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
-⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝚙𝚒:* ${apiUsada}
-
-» 𝙀𝙉𝙑𝙄𝘼𝙉𝘿𝙊 𝘼𝙐𝘿𝙄𝙊  🎧
-» 𝘼𝙂𝙐𝘼𝙍𝘿𝙀 𝙐𝙉 𝙋𝙊𝘾𝙊...
-
-⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
-
-> \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 𝗁𝖾𝗋𝗇𝖺𝗇𝖽𝖾𝗓.𝗑𝗒𝗓\`\`\`
-        `.trim()
-      },
-      { quoted: msg }
-    )
-
-    await new Promise(res => setTimeout(res, 2000))
-
+    // ---- Enviar el audio ya descargado ----
     await conn.sendMessage(
       msg.key.remoteJid,
       {
