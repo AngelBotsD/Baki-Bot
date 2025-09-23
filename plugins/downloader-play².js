@@ -12,7 +12,7 @@ const handler = async (msg, { conn, text }) => {
   if (!text || !text.trim()) {
     return conn.sendMessage(
       msg.key.remoteJid,
-      { text: "🎵 Ingresa el nombre de un video para buscar" },
+      { text: "🎬 Ingresa el nombre de algún video" },
       { quoted: msg }
     )
   }
@@ -21,10 +21,21 @@ const handler = async (msg, { conn, text }) => {
     react: { text: "🕒", key: msg.key }
   })
 
-  const searchQuery = text.trim()
-  const posibles = ["128kbps", "128kbps", "128kbps"]
+  const res = await yts(text)
+  const video = res.videos[0]
+  if (!video) {
+    return conn.sendMessage(
+      msg.key.remoteJid,
+      { text: "❌ Sin resultados." },
+      { quoted: msg }
+    )
+  }
 
-  let audioDownloadUrl = null
+  const { url: videoUrl, title, timestamp: duration, author } = video
+  const artista = author.name
+  const posibles = ["2160p","1440p","1080p","720p","480p","360p","240p","144p"]
+
+  let videoDownloadUrl = null
   let calidadElegida = "Desconocida"
   let apiUsada = "Desconocida"
 
@@ -35,12 +46,6 @@ const handler = async (msg, { conn, text }) => {
     while (!winner && intentos < 2) {
       intentos++
       try {
-        const res = await yts(searchQuery)
-        const video = res.videos[0]
-        if (!video) throw new Error("❌ No se encontró ningún resultado.")
-
-        const videoUrl = video.url
-
         const tryApi = (apiName, urlBuilder) => new Promise(async (resolve, reject) => {
           const controller = new AbortController()
           try {
@@ -59,30 +64,22 @@ const handler = async (msg, { conn, text }) => {
             }
             reject(new Error(`${apiName}: No entregó un URL válido`))
           } catch (err) {
-            if (!err.message.toLowerCase().includes("aborted")) reject(new Error(`${apiName}: ${err.message}`))
+            if (!err.message.toLowerCase().includes("aborted")) {
+              reject(new Error(`${apiName}: ${err.message}`))
+            }
           }
         })
 
-        const mayApi = tryApi("MayAPI", q =>
-          `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=may-0595dca2`
-        )
-        const neoxApi = tryApi("NeoxR", q =>
-          `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`
-        )
-        const adonixApi = tryApi("Dash", q =>
-          `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}`
-        )
-        const adofreeApi = tryApi("Delay", q =>
-          `http://173.208.192.170/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}`
-        )
+        const mayApi = tryApi("MayAPI", q => `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&quality=${q}&apikey=may-0595dca2`)
+        const neoxApi = tryApi("NeoxR", q => `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=russellxz`)
+        const adonixApi = tryApi("AdonixAPI", q => `https://api-adonix.ultraplus.click/download/ytmp4?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}&quality=${q}`)
+        const adofreeApi = tryApi("Adofreekey", q => `https://api-adonix.ultraplus.click/download/ytmp4?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}&quality=${q}`)
 
         winner = await Promise.any([mayApi, neoxApi, adonixApi, adofreeApi])
-        ;[mayApi, neoxApi, adonixApi, adofreeApi].forEach(p => {
-          if (p !== winner && p.controller) p.controller.abort()
-        })
+        ;[mayApi, neoxApi, adonixApi, adofreeApi].forEach(p => { if (p !== winner && p.controller) p.controller.abort() })
       } catch (e) {
-        if (intentos >= 2) throw new Error("No se pudo obtener el audio después de 2 intentos.")
-        // reintenta automáticamente si falla la primera
+        if (intentos >= 2) throw new Error("No se pudo obtener el video/audio después de 2 intentos.")
+        // si fallo primer intento, vuelve a intentar automáticamente
       }
     }
 
@@ -91,24 +88,15 @@ const handler = async (msg, { conn, text }) => {
 
   try {
     const winner = await tryDownload()
-
-    const res = await yts(searchQuery)
-    const video = res.videos[0]
-    const videoUrl = video.url
-    const title = video.title || "Desconocido"
-    const artista = video.author?.name || "Desconocido"
-    const duration = video.timestamp || "Desconocida"
-    const thumbnail = video.image || null
-
-    audioDownloadUrl = winner.url
+    videoDownloadUrl = winner.url
     calidadElegida = winner.quality
     apiUsada = winner.api
 
     const tmp = path.join(process.cwd(), "tmp")
     if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
-    const file = path.join(tmp, `${Date.now()}_audio.mp3`)
+    const file = path.join(tmp, `${Date.now()}_vid.mp4`)
 
-    const dl = await axios.get(audioDownloadUrl, { responseType: "stream", timeout: 0 })
+    const dl = await axios.get(videoDownloadUrl, { responseType: "stream", timeout: 0 })
     let totalSize = 0
     dl.data.on("data", chunk => {
       totalSize += chunk.length
@@ -126,9 +114,11 @@ const handler = async (msg, { conn, text }) => {
     await conn.sendMessage(
       msg.key.remoteJid,
       {
-        image: { url: thumbnail },
+        video: fs.readFileSync(file),
+        mimetype: "video/mp4",
+        fileName: `${title}.mp4`,
         caption: `
-> *𝙰𝚄𝙳𝙸𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
+> *𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
 ⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
@@ -136,43 +126,31 @@ const handler = async (msg, { conn, text }) => {
 ⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
 ⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝚙𝚒:* ${apiUsada}
 
-» 𝙀𝙉𝙑𝙄𝘼𝙉𝘿𝙊 𝘼𝙐𝘿𝙄𝙊  🎧
-» 𝘼𝙂𝙐𝘼𝙍𝘿𝙀 𝙐𝙉 𝙋𝙊𝘾𝙊...
+» 𝙑𝙄𝘿𝙀𝙊 𝙀𝙉𝙑𝙄𝘼𝘿𝙊  🎧
+» 𝘿𝙄𝙎𝙁𝙍𝙐𝙏𝘼𝙇𝙊 𝘾𝘼𝙈𝙋𝙀𝙊𝙉..
 
 ⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
 
 > \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 𝗁𝖾𝗋𝗇𝖺𝗇𝖽𝖾𝗓.𝗑𝗒𝗓\`\`\`
-        `.trim()
-      },
-      { quoted: msg }
-    )
-
-    await new Promise(res => setTimeout(res, 2000))
-
-    await conn.sendMessage(
-      msg.key.remoteJid,
-      {
-        audio: fs.readFileSync(file),
-        mimetype: "audio/mpeg",
-        fileName: `${title}.mp3`
+        `.trim(),
+        supportsStreaming: true,
+        contextInfo: { isHd: true }
       },
       { quoted: msg }
     )
 
     fs.unlinkSync(file)
 
-    await conn.sendMessage(msg.key.remoteJid, {
-      react: { text: "✅", key: msg.key }
-    })
+    await conn.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } })
   } catch (e) {
     console.error(e)
     await conn.sendMessage(
       msg.key.remoteJid,
-      { text: `⚠️ Error al descargar el audio:\n\n${e.message}` },
+      { text: `⚠️ Error al descargar el video:\n\n${e.message}` },
       { quoted: msg }
     )
   }
 }
 
-handler.command = ["play"]
+handler.command = ["play2"]
 export default handler
