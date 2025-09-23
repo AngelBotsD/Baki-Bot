@@ -162,7 +162,7 @@ await conn.sendMessage(msg.key.remoteJid, {
 console.error(e)
 await conn.sendMessage(
 msg.key.remoteJid,
-{ text: `⚠️ Error al descargar el video:\n\n${e.message}` },
+{ text: `⚠️ Si sale "Aborted" Reintenta de nuevo:\n\n${e.message}` },
 { quoted: msg }
 )
 }
