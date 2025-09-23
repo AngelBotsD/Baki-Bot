@@ -64,9 +64,15 @@ const handler = async (msg, { conn, text }) => {
             }
             reject(new Error(`${apiName}: No entregó un URL válido`))
           } catch (err) {
-            if (!err.message.toLowerCase().includes("aborted")) {
-              reject(new Error(`${apiName}: ${err.message}`))
+            // ignoramos abort/cancel para que no salga al usuario
+            if (
+              err.message &&
+              (err.message.toLowerCase().includes("aborted") ||
+               err.message.toLowerCase().includes("canceled"))
+            ) {
+              return
             }
+            reject(new Error(`${apiName}: ${err.message}`))
           }
         })
 
