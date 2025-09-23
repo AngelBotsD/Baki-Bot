@@ -1,5 +1,4 @@
 import axios from "axios"
-import yts from "yt-search"
 import fs from "fs"
 import path from "path"
 import { promisify } from "util"
@@ -18,7 +17,7 @@ const handler = async (msg, { conn, text }) => {
     )
   }
 
-  if (!/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(text.trim())) {
+  if (!/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/i.test(text.trim())) {
     return conn.sendMessage(
       msg.key.remoteJid,
       { text: "⚠️ Solo se permiten links de YouTube.\n\nEjemplo:\n.play2 https://youtu.be/dQw4w9WgXcQ" },
@@ -31,21 +30,26 @@ const handler = async (msg, { conn, text }) => {
   })
 
   const videoUrl = text.trim()
-  const posibles = ["2160p","1440p","1080p","720p","480p","360p","240p","144p"]
+  const posibles = ["2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p"]
 
   let videoDownloadUrl = null
   let calidadElegida = "Desconocida"
   let apiUsada = "Desconocida"
+  let errorLogs = []
 
-  let title = "Desconocido", artista = "Desconocido", duration = "Desconocida"
+  // Metadata confiable
+  let title = "Desconocido"
+  let artista = "Desconocido"
+  let duration = "Desconocida"
 
   try {
     const info = await ytdl.getInfo(videoUrl)
-    title = info.videoDetails.title || title
-    artista = info.videoDetails.author?.name || artista
-    duration = new Date(info.videoDetails.lengthSeconds*1000).toISOString().substr(11,8) || duration
-  } catch {
-    // si falla, usamos valores por defecto
+    title = info.videoDetails.title || "Desconocido"
+    artista = info.videoDetails.author?.name || "Desconocido"
+    duration = new Date(info.videoDetails.lengthSeconds * 1000)
+                 .toISOString().substr(11, 8) // hh:mm:ss
+  } catch (err) {
+    console.error("Error obteniendo metadata:", err)
   }
 
   try {
@@ -55,7 +59,10 @@ const handler = async (msg, { conn, text }) => {
         try {
           for (const q of posibles) {
             const apiUrl = urlBuilder(q)
-            const r = await axios.get(apiUrl, { timeout: 25000, signal: controller.signal })
+            const r = await axios.get(apiUrl, {
+              timeout: 60000,
+              signal: controller.signal
+            })
             if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
               resolve({
                 url: r.data.result?.url || r.data.data?.url,
@@ -73,21 +80,33 @@ const handler = async (msg, { conn, text }) => {
       })
     }
 
-    const apis = [
-      tryApi("MayAPI", q => `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&quality=${q}&apikey=may-0595dca2`),
-      tryApi("NeoxR", q => `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=russellxz`),
-      tryApi("AdonixAPI", q => `https://api-adonix.ultraplus.click/download/ytmp4?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}&quality=${q}`)
-    ]
+    const mayApi = tryApi("MayAPI", q =>
+      `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&quality=${q}&apikey=may-0595dca2`
+    )
+
+    const neoxApi = tryApi("NeoxR", q =>
+      `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=russellxz`
+    )
+
+    const adonixApi = tryApi("AdonixAPI", q =>
+      `https://api-adonix.ultraplus.click/download/ytmp4?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}&quality=${q}`
+    )
 
     let winner
-    try { 
-      winner = await Promise.any(apis) 
-    } catch {
-      // retry silencioso automático si falla
-      winner = await Promise.any(apis)
+    try {
+      winner = await Promise.any([mayApi, neoxApi, adonixApi])
+    } catch (err) {
+      throw new Error(
+        "No se pudo obtener el video en ninguna calidad.\n\nLogs:\n" +
+        errorLogs.join("\n")
+      )
     }
 
-    apis.forEach(p => { if(p.controller) p.controller.abort() })
+    ;[mayApi, neoxApi, adonixApi].forEach(p => {
+      if (p !== winner && p.controller) {
+        p.controller.abort()
+      }
+    })
 
     videoDownloadUrl = winner.url
     calidadElegida = winner.quality
@@ -101,7 +120,9 @@ const handler = async (msg, { conn, text }) => {
     let totalSize = 0
     dl.data.on("data", chunk => {
       totalSize += chunk.length
-      if (totalSize > MAX_FILE_SIZE) dl.data.destroy()
+      if (totalSize > MAX_FILE_SIZE) {
+        dl.data.destroy()
+      }
     })
 
     await streamPipe(dl.data, fs.createWriteStream(file))
@@ -122,11 +143,11 @@ const handler = async (msg, { conn, text }) => {
 
 > *𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
-⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
-⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
-⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒𝚘́𝚗:* ${duration}
-⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
-⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝚙𝚒:* ${apiUsada}
+⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃ítulo:* ${title}
+⭒ ִֶָ७ ꯭🎤˙⋆｡ - *Artista:* ${artista}
+⭒ ִֶָ७ ꯭🕑˙⋆｡ - *Duración:* ${duration}
+⭒ ִֶָ७ ꯭📺˙⋆｡ - *Calidad:* ${calidadElegida}
+⭒ ִֶָ७ ꯭🌐˙⋆｡ - *Api:* ${apiUsada}
 
 » 𝘌𝘕𝘝𝘐𝘈𝘕𝘋𝘖 𝘈𝘜𝘋𝘐𝘖  🎧
 » 𝘈𝘎𝘜𝘈𝘙𝘋𝘌 𝘜𝘕 𝘗𝘖𝘊𝘖...
@@ -134,7 +155,7 @@ const handler = async (msg, { conn, text }) => {
 ⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
 
 > \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 ba.𝗑𝗒𝗓\`\`\`
-`.trim(),
+        `.trim(),
         supportsStreaming: true,
         contextInfo: { isHd: true }
       },
@@ -142,7 +163,10 @@ const handler = async (msg, { conn, text }) => {
     )
 
     fs.unlinkSync(file)
-    await conn.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } })
+
+    await conn.sendMessage(msg.key.remoteJid, {
+      react: { text: "✅", key: msg.key }
+    })
 
   } catch (e) {
     console.error(e)
@@ -155,4 +179,5 @@ const handler = async (msg, { conn, text }) => {
 }
 
 handler.command = ["ytmp4"]
+
 export default handler
