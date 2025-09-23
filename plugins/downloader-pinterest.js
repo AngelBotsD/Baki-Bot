@@ -30,7 +30,8 @@ react: { text: "🕒", key: msg.key }
 })
 
 const videoUrl = text.trim()
-const posibles = ["2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p"]
+const posibles = ["2160p", "1440p", "1080p",
+"720p", "480p", "360p", "240p", "144p"]
 
 let videoDownloadUrl = null
 let calidadElegida = "Desconocida"
