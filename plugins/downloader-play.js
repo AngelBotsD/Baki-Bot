@@ -72,10 +72,11 @@ const handler = async (msg, { conn, text }) => {
 
         const mayApi = tryApi("MayAPI", q => `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&quality=${q}&apikey=may-0595dca2`)
         const neoxApi = tryApi("NeoxR", q => `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=russellxz`)
-        const adonixApi = tryApi("AdonixAPI", q => `https://api-adonix.ultraplus.click/download/ytmp4?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}&quality=${q}`)
+        const adonixApi = tryApi("Dash", q => `https://api-adonix.ultraplus.click/download/ytmp4?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}&quality=${q}`)
+        const adofreeApi = tryApi("Delay", q => `https://api-adonix.ultraplus.click/download/ytmp4?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}&quality=${q}`)
 
-        winner = await Promise.any([mayApi, neoxApi, adonixApi])
-        ;[mayApi, neoxApi, adonixApi].forEach(p => { if (p !== winner && p.controller) p.controller.abort() })
+        winner = await Promise.any([mayApi, neoxApi, adonixApi, adofreeApi])
+        ;[mayApi, neoxApi, adonixApi, adofreeApi].forEach(p => { if (p !== winner && p.controller) p.controller.abort() })
       } catch (e) {
         if (intentos >= 2) throw new Error("No se pudo obtener el video/audio después de 2 intentos.")
         // si fallo primer intento, vuelve a intentar automáticamente
