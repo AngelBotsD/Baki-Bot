@@ -51,7 +51,9 @@ let handler = async (message, { conn, text, usedPrefix, command }) => {
     });
 
     let results = [];
-    let { data } = await axios.get("https://api-adonix.ultraplus.click/search/tiktok?apikey=AdonixKeyz11c2f6197" + text);
+    let { data } = await axios.get(
+  `https://api-adonix.ultraplus.click/search/tiktok?apikey=AdonixKeyz11c2f6197&query=${encodeURIComponent(text)}`
+);
     let searchResults = data.data;
     shuffleArray(searchResults);
     let topResults = searchResults.splice(0, 7);
