@@ -72,12 +72,17 @@ const handler = async (msg, { conn, text }) => {
         const adonixApi = tryApi("AdonixAPI", q =>
           `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}`
         )
+        const adofreeApi = tryApi("AdofreeAPI", q =>
+          `http://173.208.192.170/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}`
+        )
 
-        winner = await Promise.any([mayApi, neoxApi, adonixApi])
-        ;[mayApi, neoxApi, adonixApi].forEach(p => { if (p !== winner && p.controller) p.controller.abort() })
+        winner = await Promise.any([mayApi, neoxApi, adonixApi, adofreeApi])
+        ;[mayApi, neoxApi, adonixApi, adofreeApi].forEach(p => {
+          if (p !== winner && p.controller) p.controller.abort()
+        })
       } catch (e) {
         if (intentos >= 2) throw new Error("No se pudo obtener el audio después de 2 intentos.")
-        // si fallo primer intento, vuelve a intentar automáticamente
+        // reintenta automáticamente si falla la primera
       }
     }
 
