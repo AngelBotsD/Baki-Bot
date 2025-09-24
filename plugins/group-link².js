@@ -30,6 +30,5 @@ var handler = async (m, { conn }) => {
 handler.customPrefix = /^\.?(link)$/i;
 handler.command = new RegExp();
 handler.group = true;
-handler.botAdmin = true;
 handler.admin = true;
 export default handler
