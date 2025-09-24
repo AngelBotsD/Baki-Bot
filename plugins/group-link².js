@@ -1,17 +1,8 @@
 import fetch from 'node-fetch'
 
-var handler = async (m, { conn, participants, isAdmin, isOwner }) => {
+var handler = async (m, { conn }) => {
   try {
-    if (!m.isGroup) return;
-    if (!isAdmin && !isOwner) return global.dfail?.('admin', m, conn);
-
-    let link
-    try {
-      link = '🗡️ https://chat.whatsapp.com/' + await conn.groupInviteCode(m.chat)
-    } catch (error) {
-      console.error(error)
-      return;
-    }
+    let link = '🗡️ https://chat.whatsapp.com/' + await conn.groupInviteCode(m.chat)
 
     let ppUrl = await conn.profilePictureUrl(m.chat, 'image').catch(() => null)
 
@@ -39,6 +30,5 @@ var handler = async (m, { conn, participants, isAdmin, isOwner }) => {
 handler.customPrefix = /^\.?(link)$/i;
 handler.command = new RegExp();
 handler.group = true;
-handler.admin = true;
-handler.botAdmin = true;
+
 export default handler
