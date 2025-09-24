@@ -35,59 +35,42 @@ const handler = async (msg, { conn, text }) => {
 
   let videoDownloadUrl = null
   let apiUsada = "Desconocida"
+  let calidadElegida = "Desconocida"
 
-  const tryDownload = async () => {
-    let winner = null
-    let intentos = 0
+  // Función rápida: primero que funcione, se queda
+  const tryDownloadFast = async () => {
+    const apis = [
+      { name: "MayAPI", url: q => `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&quality=${q}&apikey=may-0595dca2` },
+      { name: "NeoxR", url: q => `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=russellxz` },
+      { name: "AdonixAPI", url: q => `https://api-adonix.ultraplus.click/download/ytmp4?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}&quality=${q}` },
+      { name: "Adofreekey", url: q => `https://api-adonix.ultraplus.click/download/ytmp4?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}&quality=${q}` }
+    ]
 
-    while (!winner && intentos < 2) {
-      intentos++
+    for (const api of apis) {
       try {
-        const tryApi = (apiName, urlBuilder) => new Promise(async (resolve, reject) => {
-          const controller = new AbortController()
-          try {
-            for (const q of posibles) {
-              const apiUrl = urlBuilder(q)
-              const r = await axios.get(apiUrl, { timeout: 10000, signal: controller.signal })
-              if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
-                resolve({
-                  url: r.data.result?.url || r.data.data?.url,
-                  api: apiName,
-                  controller
-                })
-                return
-              }
+        for (const q of posibles) {
+          const r = await axios.get(api.url(q), { timeout: 10000 })
+          if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
+            return {
+              url: r.data.result?.url || r.data.data?.url,
+              api: api.name,
+              quality: q
             }
-            reject(new Error(`${apiName}: No entregó un URL válido`))
-          } catch (err) {
-            if (
-              err.message &&
-              (err.message.toLowerCase().includes("aborted") ||
-               err.message.toLowerCase().includes("canceled"))
-            ) return
-            reject(new Error(`${apiName}: ${err.message}`))
           }
-        })
-
-        const mayApi = tryApi("MayAPI", q => `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&quality=${q}&apikey=may-0595dca2`)
-        const neoxApi = tryApi("NeoxR", q => `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=russellxz`)
-        const adonixApi = tryApi("AdonixAPI", q => `https://api-adonix.ultraplus.click/download/ytmp4?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}&quality=${q}`)
-        const adofreeApi = tryApi("Adofreekey", q => `https://api-adonix.ultraplus.click/download/ytmp4?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}&quality=${q}`)
-
-        winner = await Promise.any([mayApi, neoxApi, adonixApi, adofreeApi])
-        ;[mayApi, neoxApi, adonixApi, adofreeApi].forEach(p => { if (p !== winner && p.controller) p.controller.abort() })
+        }
       } catch (e) {
-        if (intentos >= 2) throw new Error("No se pudo obtener el video después de 2 intentos.")
+        continue
       }
     }
 
-    return winner
+    throw new Error("No se pudo obtener el video con ninguna API")
   }
 
   try {
-    const winner = await tryDownload()
+    const winner = await tryDownloadFast()
     videoDownloadUrl = winner.url
     apiUsada = winner.api
+    calidadElegida = winner.quality
 
     // Plan A: Enviar directo con URL
     try {
@@ -106,13 +89,13 @@ const handler = async (msg, { conn, text }) => {
 ⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
 ⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝚙𝚒:* ${apiUsada}
 
-» 𝙑𝙄𝘿𝙀𝙊 𝙀𝙉𝙑𝙄𝘼𝘿𝙊  🎧
+» 𝙑𝙸𝘿𝙴𝙊 𝙀𝙽𝙑𝙸𝘼𝘿𝙊  🎧
 » 𝘿𝙄𝙎𝙁𝙍𝙐𝙏𝘼𝙇𝙊 𝘾𝘼𝙈𝙋𝙀𝙊𝙉..
 
 ⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
 
 > \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 𝗁𝖾𝗋𝗇𝖺𝗇𝖽𝖾𝗓.𝗑𝗒𝗓\`\`\`
-              `.trim(),
+          `.trim(),
           supportsStreaming: true,
           contextInfo: { isHd: true }
         },
@@ -121,10 +104,9 @@ const handler = async (msg, { conn, text }) => {
       await conn.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } })
       return
     } catch (err) {
-      // Si falla el envío directo → Plan B
+      // Plan B: Descargar archivo y enviar
     }
 
-    // Plan B: Descargar archivo y enviar
     const tmp = path.join(process.cwd(), "tmp")
     if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
     const file = path.join(tmp, `${Date.now()}_vid.mp4`)
@@ -159,13 +141,13 @@ const handler = async (msg, { conn, text }) => {
 ⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
 ⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝚙𝚒:* ${apiUsada}
 
-» 𝙑𝙄𝘿𝙀𝙊 𝙀𝙉𝙑𝙄𝘼𝘿𝙊  🎧
+» 𝙑𝙸𝘿𝙴𝙊 𝙀𝙽𝙑𝙸𝘼𝘿𝙊  🎧
 » 𝘿𝙄𝙎𝙁𝙍𝙐𝙏𝘼𝙇𝙊 𝘾𝘼𝙈𝙋𝙀𝙊𝙉..
 
 ⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
 
 > \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 𝗁𝖾𝗋𝗇𝖺𝗇𝖽𝖾𝗓.𝗑𝗒𝗓\`\`\`
-            `.trim(),
+          `.trim(),
         supportsStreaming: true,
         contextInfo: { isHd: true }
       },
