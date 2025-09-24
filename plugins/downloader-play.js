@@ -48,7 +48,7 @@ const handler = async (msg, { conn, text }) => {
         const tryApi = (apiName, urlBuilder) => new Promise(async (resolve, reject) => {
           try {
             const apiUrl = urlBuilder()
-            const r = await axios.get(apiUrl, { timeout: 15000 })
+            const r = await axios.get(apiUrl, { timeout: 5000 })
             if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
               resolve({
                 url: r.data.result?.url || r.data.data?.url,
