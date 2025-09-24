@@ -26,6 +26,6 @@ let handler = async (m, { conn }) => {
 
 handler.customPrefix = /^(?:\.?grupo\s(?:abrir|cerrar|open|close)|\.?(?:abrir|cerrar|open|close))$/i
 handler.command = new RegExp()
-handler.group = true
-
-export default handler
+handler.group = true;
+handler.group = true;
+export default handler;
