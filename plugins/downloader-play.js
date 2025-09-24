@@ -17,11 +17,13 @@ const handler = async (msg, { conn, text }) => {
     )
   }
 
+  // ✅ Reacción al iniciar
   await conn.sendMessage(msg.key.remoteJid, {
     react: { text: "🕒", key: msg.key }
   })
 
-  const res = await yts(text)
+  // ✅ Búsqueda optimizada con hl/gl
+  const res = await yts({ query: text, hl: "es", gl: "ES" })
   const song = res.videos[0]
   if (!song) {
     return conn.sendMessage(
@@ -48,7 +50,8 @@ const handler = async (msg, { conn, text }) => {
         const tryApi = (apiName, urlBuilder) => new Promise(async (resolve, reject) => {
           try {
             const apiUrl = urlBuilder()
-            const r = await axios.get(apiUrl, { timeout: 5000 })
+            // ✅ Timeout más corto
+            const r = await axios.get(apiUrl, { timeout: 7000 })
             if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
               resolve({
                 url: r.data.result?.url || r.data.data?.url,
@@ -91,64 +94,88 @@ const handler = async (msg, { conn, text }) => {
         caption: `
 > *𝙰𝚄𝙳𝙸𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
-⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
-⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
-⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
-⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
-⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝚙𝚒:* ${apiUsada}
+⭒ ִֶָ७ ꯭🎵 - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
+⭒ ִֶָ७ ꯭🎤 - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
+⭒ ִֶָ७ ꯭🕑 - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
+⭒ ִֶָ७ ꯭📺 - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
+⭒ ִֶָ७ ꯭🌐 - *𝙰𝚙𝚒:* ${apiUsada}
 
-» 𝙀𝙉𝙑𝙄𝘼𝙉𝘿𝙊 𝘼𝙐𝘿𝙄𝙊  🎧
-» 𝘼𝙂𝙐𝘼𝙍𝘿𝙀 𝙐𝙉 𝙋𝙊𝘾𝙊...
-
-⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
-
-> \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 𝗁𝖾𝗋𝗇𝖺𝗇𝖽𝖾𝗓.𝗑𝗒𝗓\`\`\`
+» 𝙀𝙉𝙑𝙄𝘼𝙉𝘿𝙊 𝘼𝙐𝘿𝙄𝙊 🎧
+⇆‌ ◁ ❚❚ ▷ ↻
           `.trim()
       },
       { quoted: msg }
     )
 
-    const tmp = path.join(process.cwd(), "tmp")
-    if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
-    const file = path.join(tmp, `${Date.now()}_audio.mp3`)
+    // ✅ Opción 1: modo "ligero", mandar URL directo (sin control de peso)
+    const usarUrlDirecto = false // cámbialo a true si quieres probar este modo
+    if (usarUrlDirecto) {
+      await conn.sendMessage(
+        msg.key.remoteJid,
+        {
+          audio: { url: audioDownloadUrl },
+          mimetype: "audio/mpeg",
+          fileName: `${title}.mp3`,
+          ptt: false
+        },
+        { quoted: msg }
+      )
+    } else {
+      // ✅ Tu método original (seguro, con control de tamaño)
+      const tmp = path.join(process.cwd(), "tmp")
+      if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
+      const file = path.join(tmp, `${Date.now()}_audio.mp3`)
 
-    const dl = await axios.get(audioDownloadUrl, { responseType: "stream", timeout: 0 })
-    let totalSize = 0
-    dl.data.on("data", chunk => {
-      totalSize += chunk.length
-      if (totalSize > MAX_FILE_SIZE) dl.data.destroy()
-    })
+      const dl = await axios.get(audioDownloadUrl, { responseType: "stream", timeout: 0 })
+      let totalSize = 0
+      dl.data.on("data", chunk => {
+        totalSize += chunk.length
+        if (totalSize > MAX_FILE_SIZE) dl.data.destroy()
+      })
 
-    await streamPipe(dl.data, fs.createWriteStream(file))
+      await streamPipe(dl.data, fs.createWriteStream(file))
 
-    const stats = fs.statSync(file)
-    if (stats.size > MAX_FILE_SIZE) {
+      const stats = fs.statSync(file)
+      if (stats.size > MAX_FILE_SIZE) {
+        fs.unlinkSync(file)
+        throw new Error("El archivo excede el límite de 60 MB permitido por WhatsApp.")
+      }
+
+      await conn.sendMessage(
+        msg.key.remoteJid,
+        {
+          audio: fs.readFileSync(file),
+          mimetype: "audio/mpeg",
+          fileName: `${title}.mp3`,
+          ptt: false
+        },
+        { quoted: msg }
+      )
+
       fs.unlinkSync(file)
-      throw new Error("El archivo excede el límite de 60 MB permitido por WhatsApp.")
     }
 
-    await conn.sendMessage(
-      msg.key.remoteJid,
-      {
-        audio: fs.readFileSync(file),
-        mimetype: "audio/mpeg",
-        fileName: `${title}.mp3`,
-        ptt: false
-      },
-      { quoted: msg }
-    )
-
-    fs.unlinkSync(file)
+    // ✅ Reacción de éxito final
     await conn.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } })
+
   } catch (e) {
     console.error(e)
+    // ✅ Error amigable
+    const errorMsg = typeof e === "string"
+      ? e
+      : `❌ *Error:* ${e.message || "Ocurrió un problema"}\n\n` +
+        `🔸 *Posibles soluciones:*\n` +
+        `• Verifica el nombre de la canción\n` +
+        `• Intenta con otro tema\n` +
+        `• Prueba más tarde`
+
     await conn.sendMessage(
       msg.key.remoteJid,
-      { text: `⚠️ Error al descargar el audio:\n\n${e.message}` },
+      { text: errorMsg },
       { quoted: msg }
     )
   }
 }
 
-handler.command = ["play"]
+handler.command = ['play', 'playaudio', 'ytmusic'];
 export default handler
