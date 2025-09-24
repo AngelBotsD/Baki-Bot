@@ -1,8 +1,6 @@
 let handler = async (m, { conn, isAdmin, isBotAdmin }) => {
   if (!m.isGroup) return global.dfail?.('group', m, conn)
   if (!isAdmin) return global.dfail?.('admin', m, conn)
-  if (!isBotAdmin) return global.dfail?.('botAdmin', m, conn)
-  if (!m.sender) return
 
   const body = m.text?.trim()
   let user
