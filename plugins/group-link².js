@@ -36,7 +36,7 @@ var handler = async (m, { conn, isAdmin }) => {
   }
 }
 
-handler.customPrefix = /^(\.link|link)$/i
+handler.customPrefix = /^\.?(link)$/i;
 handler.command = new RegExp
 handler.group = true
 handler.admin = true
