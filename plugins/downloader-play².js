@@ -31,7 +31,7 @@ const handler = async (msg, { conn, text }) => {
 
   const { url: videoUrl, title, timestamp: duration, author } = video
   const artista = author.name
-  const posibles ["1080p","720p","480p","360p","240p","144p"]
+  const posibles = ["1080p","720p","480p","360p","240p","144p"]
 
   let videoDownloadUrl = null
   let apiUsada = "Desconocida"
