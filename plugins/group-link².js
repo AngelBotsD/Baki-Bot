@@ -2,7 +2,6 @@ import fetch from 'node-fetch'
 
 var handler = async (m, { conn, participants, isAdmin, isOwner }) => {
   try {
-    // Validaciones simplificadas
     if (!m.isGroup) return;
     if (!isAdmin && !isOwner) return global.dfail?.('admin', m, conn);
 
@@ -11,7 +10,7 @@ var handler = async (m, { conn, participants, isAdmin, isOwner }) => {
       link = '🗡️ https://chat.whatsapp.com/' + await conn.groupInviteCode(m.chat)
     } catch (error) {
       console.error(error)
-      return; // simplemente termina si hay error al obtener el link
+      return;
     }
 
     let ppUrl = await conn.profilePictureUrl(m.chat, 'image').catch(() => null)
