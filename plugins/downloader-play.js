@@ -108,7 +108,7 @@ const handler = async (msg, { conn, text }) => {
     )
 
     // ✅ Opción 1: modo "ligero", mandar URL directo (sin control de peso)
-    const usarUrlDirecto = false // cámbialo a true si quieres probar este modo
+    const usarUrlDirecto = true // cámbialo a true si quieres probar este modo
     if (usarUrlDirecto) {
       await conn.sendMessage(
         msg.key.remoteJid,
