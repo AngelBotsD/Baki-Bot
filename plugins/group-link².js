@@ -1,15 +1,17 @@
 import fetch from 'node-fetch'
 
-var handler = async (m, { conn, isAdmin }) => {
+var handler = async (m, { conn, participants, isAdmin, isOwner }) => {
   try {
-    if (!m.isGroup) return global.dfail?.('group', m, conn)
-    if (!isAdmin) return global.dfail?.('admin', m, conn)
+    // Validaciones simplificadas
+    if (!m.isGroup) return;
+    if (!isAdmin && !isOwner) return global.dfail?.('admin', m, conn);
 
     let link
     try {
       link = '🗡️ https://chat.whatsapp.com/' + await conn.groupInviteCode(m.chat)
-    } catch {
-      return global.dfail?.('botAdmin', m, conn)
+    } catch (error) {
+      console.error(error)
+      return; // simplemente termina si hay error al obtener el link
     }
 
     let ppUrl = await conn.profilePictureUrl(m.chat, 'image').catch(() => null)
@@ -32,13 +34,11 @@ var handler = async (m, { conn, isAdmin }) => {
 
   } catch (error) {
     console.error(error)
-    return global.dfail?.('botAdmin', m, conn)
   }
 }
 
 handler.customPrefix = /^\.?(link)$/i;
-handler.command = new RegExp
-handler.group = true
-handler.admin = true
+handler.command = new RegExp();
+handler.group = true;
 
 export default handler
