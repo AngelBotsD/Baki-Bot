@@ -37,7 +37,7 @@ const handler = async (msg, { conn, text }) => {
   let apiUsada = "Desconocida"
   let calidadElegida = "Desconocida"
 
-  // Función rápida: primero que funcione, se queda
+  // 🔥 Función rápida: primera URL que funcione
   const tryDownloadFast = async () => {
     const apis = [
       { name: "MayAPI", url: q => `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&quality=${q}&apikey=may-0595dca2` },
@@ -58,9 +58,7 @@ const handler = async (msg, { conn, text }) => {
             }
           }
         }
-      } catch (e) {
-        continue
-      }
+      } catch(e) { continue }
     }
 
     throw new Error("No se pudo obtener el video con ninguna API")
@@ -72,7 +70,7 @@ const handler = async (msg, { conn, text }) => {
     apiUsada = winner.api
     calidadElegida = winner.quality
 
-    // Plan A: Enviar directo con URL
+    // Plan A: enviar directo streaming
     try {
       await conn.sendMessage(
         msg.key.remoteJid,
@@ -81,15 +79,15 @@ const handler = async (msg, { conn, text }) => {
           mimetype: "video/mp4",
           fileName: `${title}.mp4`,
           caption: `
-> *𝚈𝚃𝙼𝙿4 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
+> 𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁
 
-⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
-⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
-⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
-⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
-⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝚙𝚒:* ${apiUsada}
+⭒ ִֶָ७ ꯭🎵˙⋆｡ - 𝚃𝚒́𝚝𝚞𝚕𝚘: ${title}
+⭒ ִֶָ७ ꯭🎤˙⋆｡ - 𝙰𝚛𝚝𝚒𝚜𝚝𝚊: ${artista}
+⭒ ִֶָ७ ꯭🕑˙⋆｡ - 𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗: ${duration}
+⭒ ִֶָ७ ꯭📺˙⋆｡ - 𝙲𝚊𝚕𝚒𝚍𝚊𝚍: ${calidadElegida}
+⭒ ִֶָ७ ꯭🌐˙⋆｡ - 𝙰𝚙𝚒: ${apiUsada}
 
-» 𝙑𝙸𝘿𝙴𝙊 𝙀𝙽𝙑𝙸𝘼𝘿𝙊  🎧
+» 𝙑𝙄𝘿𝙀𝙊 𝙀𝙽𝙑𝙄𝘼𝘿𝙊  🎧
 » 𝘿𝙄𝙎𝙁𝙍𝙐𝙏𝘼𝙇𝙊 𝘾𝘼𝙈𝙋𝙀𝙊𝙉..
 
 ⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
@@ -103,10 +101,9 @@ const handler = async (msg, { conn, text }) => {
       )
       await conn.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } })
       return
-    } catch (err) {
-      // Plan B: Descargar archivo y enviar
-    }
+    } catch (err) { /* Plan B */ }
 
+    // Plan B: descargar archivo y enviar
     const tmp = path.join(process.cwd(), "tmp")
     if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
     const file = path.join(tmp, `${Date.now()}_vid.mp4`)
@@ -133,15 +130,15 @@ const handler = async (msg, { conn, text }) => {
         mimetype: "video/mp4",
         fileName: `${title}.mp4`,
         caption: `
-> *𝚈𝚃𝙼𝙿4 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
+> 𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁
 
-⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
-⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
-⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
-⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
-⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝚙𝚒:* ${apiUsada}
+⭒ ִֶָ७ ꯭🎵˙⋆｡ - 𝚃𝚒́𝚝𝚞𝚕𝚘: ${title}
+⭒ ִֶָ७ ꯭🎤˙⋆｡ - 𝙰𝚛𝚝𝚒𝚜𝚝𝚊: ${artista}
+⭒ ִֶָ७ ꯭🕑˙⋆｡ - 𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗: ${duration}
+⭒ ִֶָ७ ꯭📺˙⋆｡ - 𝙲𝚊𝚕𝚒𝚍𝚊𝚍: ${calidadElegida}
+⭒ ִֶָ७ ꯭🌐˙⋆｡ - 𝙰𝚙𝚒: ${apiUsada}
 
-» 𝙑𝙸𝘿𝙴𝙊 𝙀𝙽𝙑𝙸𝘼𝘿𝙊  🎧
+» 𝙑𝙄𝘿𝙀𝙊 𝙀𝙽𝙑𝙄𝘼𝘿𝙊  🎧
 » 𝘿𝙄𝙎𝙁𝙍𝙐𝙏𝘼𝙇𝙊 𝘾𝘼𝙈𝙋𝙀𝙊𝙉..
 
 ⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
@@ -157,7 +154,7 @@ const handler = async (msg, { conn, text }) => {
     fs.unlinkSync(file)
     await conn.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } })
 
-  } catch (e) {
+  } catch(e) {
     console.error(e)
     await conn.sendMessage(
       msg.key.remoteJid,
