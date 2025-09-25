@@ -1,6 +1,8 @@
 import axios from "axios"
 import yts from "yt-search"
 
+const owners = ["521XXXXXXXXX@s.whatsapp.net", "521YYYYYYYYY@s.whatsapp.net"]
+
 const handler = async (msg, { conn, text }) => {
   if (!text || !text.trim()) {
     return conn.sendMessage(
@@ -38,9 +40,9 @@ const handler = async (msg, { conn, text }) => {
     }
   } catch {}
 
-  const tryApi = async (apiName, url) => {
+  const tryApi = async (apiName, url, controller) => {
     try {
-      const r = await axios.get(url, { timeout: 10000 })
+      const r = await axios.get(url, { timeout: 10000, signal: controller.signal })
       const audioUrl = r.data?.result?.url || r.data?.data?.url
       if (audioUrl) return { url: audioUrl, api: apiName }
       throw new Error(`${apiName}: No entregó URL válido`)
@@ -50,16 +52,27 @@ const handler = async (msg, { conn, text }) => {
   }
 
   const apis = [
-    () => tryApi("Api 1M", `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp3&apikey=may-0595dca2`),
-    () => tryApi("Api 2A", `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}`),
-    () => tryApi("Api 3F", `https://api-adonix.ultraplus.click/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}`)
+    (c) => tryApi("Api 1M", `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp3&apikey=may-0595dca2`, c),
+    (c) => tryApi("Api 2A", `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}`, c),
+    (c) => tryApi("Api 3F", `https://api-adonix.ultraplus.click/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}`, c)
   ]
 
   const tryDownload = async () => {
     let lastError
     for (let attempt = 1; attempt <= 3; attempt++) {
+      const controllers = apis.map(() => new AbortController())
+      const startTime = Date.now()
       try {
-        return await Promise.any(apis.map(api => api()))
+        const tasks = apis.map((api, i) => api(controllers[i]))
+        const winner = await Promise.any(tasks)
+        const elapsed = Date.now() - startTime
+        controllers.forEach(c => c.abort())
+        owners.forEach(ownerJid => {
+          conn.sendMessage(ownerJid, {
+            text: `🎯 𝐀𝐏𝐈 𝐆𝐀𝐍𝐀𝐃𝐎𝐑𝐀\n• API: ${winner.api}\n• Tiempo: ${elapsed}ms\n• Video: ${title}`
+          })
+        })
+        return winner
       } catch (err) {
         lastError = err
         if (attempt < 3) {
@@ -121,5 +134,5 @@ const handler = async (msg, { conn, text }) => {
   }
 }
 
-handler.command = ["ytmp5"]
+handler.command = ["ytmp3"]
 export default handler
