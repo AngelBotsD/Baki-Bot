@@ -1,4 +1,5 @@
 import axios from "axios"
+import yts from "yt-search"
 import fs from "fs"
 import path from "path"
 import { promisify } from "util"
@@ -25,21 +26,36 @@ const handler = async (msg, { conn, text }) => {
     )
   }
 
-  const videoUrlReal = `https://www.youtube.com/watch?v=${videoMatch[1]}`
+  const videoUrl = `https://www.youtube.com/watch?v=${videoMatch[1]}`
   await conn.sendMessage(msg.key.remoteJid, { react: { text: "🕒", key: msg.key } })
 
-  let audioDownloadUrl = null
-  let apiUsada = "Desconocida"
+  // Obtener info del video con yts
   let title = "Desconocido"
   let artista = "Desconocido"
   let duration = "?"
   let thumbnail = `https://img.youtube.com/vi/${videoMatch[1]}/hqdefault.jpg`
 
+  try {
+    const info = await yts({ query: videoUrl })
+    if (info?.videos && info.videos.length > 0) {
+      const video = info.videos[0]
+      title = video.title || "Desconocido"
+      artista = video.author?.name || "Desconocido"
+      duration = video.timestamp || "?"
+      thumbnail = video.thumbnail || thumbnail
+    }
+  } catch (e) {
+    // si falla, quedan los valores por defecto
+  }
+
+  let audioDownloadUrl = null
+  let apiUsada = "Desconocida"
+
   const tryDownload = async () => {
     const tryApi = (apiName, urlBuilder) => new Promise(async (resolve, reject) => {
       try {
         const apiUrl = urlBuilder()
-        const r = await axios.get(apiUrl, { timeout: 12000 }) // ⏱️ 11s
+        const r = await axios.get(apiUrl, { timeout: 11000 })
         if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
           resolve({ url: r.data.result?.url || r.data.data?.url, api: apiName })
         } else reject(new Error(`${apiName}: No entregó un URL válido`))
@@ -49,13 +65,13 @@ const handler = async (msg, { conn, text }) => {
     })
 
     const apis = [
-      tryApi("Api 1M", () => `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrlReal)}&type=mp3&apikey=may-0595dca2`),
-      tryApi("Api 2A", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrlReal)}`),
-      tryApi("Api 3F", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrlReal)}`)
+      tryApi("Api 1M", () => `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp3&apikey=may-0595dca2`),
+      tryApi("Api 2A", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}`),
+      tryApi("Api 3F", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}`)
     ]
 
     let lastError
-    for (let attempt = 1; attempt <= 4; attempt++) { // 🔄 ahora 3 intentos
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         return await new Promise((resolve, reject) => {
           let settled = false
@@ -76,10 +92,10 @@ const handler = async (msg, { conn, text }) => {
         })
       } catch (err) {
         lastError = err
-        if (attempt < 4) { // 🔄 reaccionar solo en fallos antes del último intento
+        if (attempt < 3) {
           await conn.sendMessage(msg.key.remoteJid, { react: { text: "🔄", key: msg.key } })
         }
-        if (attempt === 4) throw lastError
+        if (attempt === 3) throw lastError
       }
     }
   }
@@ -88,18 +104,6 @@ const handler = async (msg, { conn, text }) => {
     const winner = await tryDownload()
     audioDownloadUrl = winner.url
     apiUsada = winner.api
-
-    // 🔧 Intento de obtener info del video
-    try {
-      const infoApi = `https://yt-api-cin.onrender.com/api/info?url=${encodeURIComponent(videoUrlReal)}`
-      const info = (await axios.get(infoApi)).data
-      title = info.title || "Desconocido"
-      artista = info.channel || "Desconocido"
-      duration = info.duration || "?"
-      thumbnail = info.thumbnail || thumbnail
-    } catch (e) {
-      // si falla, quedan valores por defecto
-    }
 
     await conn.sendMessage(
       msg.key.remoteJid,
@@ -125,57 +129,16 @@ const handler = async (msg, { conn, text }) => {
       { quoted: msg }
     )
 
-    let usarUrlDirecto = true
-    try {
-      if (usarUrlDirecto) {
-        await conn.sendMessage(
-          msg.key.remoteJid,
-          {
-            audio: { url: audioDownloadUrl },
-            mimetype: "audio/mpeg",
-            fileName: `${title}.mp3`,
-            ptt: false
-          },
-          { quoted: msg }
-        )
-      }
-    } catch (err) {
-      usarUrlDirecto = false
-    }
-
-    if (!usarUrlDirecto) {
-      const tmp = path.join(process.cwd(), "tmp")
-      if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
-      const file = path.join(tmp, `${Date.now()}_audio.mp3`)
-
-      const dl = await axios.get(audioDownloadUrl, { responseType: "stream", timeout: 0 })
-      let totalSize = 0
-      dl.data.on("data", chunk => {
-        totalSize += chunk.length
-        if (totalSize > MAX_FILE_SIZE) dl.data.destroy()
-      })
-
-      await streamPipe(dl.data, fs.createWriteStream(file))
-
-      const stats = fs.statSync(file)
-      if (stats.size > MAX_FILE_SIZE) {
-        fs.unlinkSync(file)
-        throw new Error("El archivo excede el límite de 60 MB permitido por WhatsApp.")
-      }
-
-      await conn.sendMessage(
-        msg.key.remoteJid,
-        {
-          audio: fs.readFileSync(file),
-          mimetype: "audio/mpeg",
-          fileName: `${title}.mp3`,
-          ptt: false
-        },
-        { quoted: msg }
-      )
-
-      fs.unlinkSync(file)
-    }
+    await conn.sendMessage(
+      msg.key.remoteJid,
+      {
+        audio: { url: audioDownloadUrl },
+        mimetype: "audio/mpeg",
+        fileName: `${title}.mp3`,
+        ptt: false
+      },
+      { quoted: msg }
+    )
 
     await conn.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } })
 
