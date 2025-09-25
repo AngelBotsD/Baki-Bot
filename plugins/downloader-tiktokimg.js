@@ -30,7 +30,7 @@ const handler = async (msg, { conn, text }) => {
   await conn.sendMessage(msg.key.remoteJid, { react: { text: "🕒", key: msg.key } })
 
   const res = await yts({ query: videoUrl, hl: "es", gl: "MX" })
-  const song = res.videos[2]
+  const song = res.videos[1]
   if (!song) {
     return conn.sendMessage(
       msg.key.remoteJid,
