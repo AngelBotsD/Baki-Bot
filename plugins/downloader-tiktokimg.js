@@ -1,5 +1,4 @@
 import axios from "axios"
-import yts from "yt-search"
 import fs from "fs"
 import path from "path"
 import { promisify } from "util"
@@ -17,7 +16,6 @@ const handler = async (msg, { conn, text }) => {
     )
   }
 
-  // regex para detectar link exacto
   const videoMatch = text.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/)
   if (!videoMatch) {
     return conn.sendMessage(
@@ -30,21 +28,9 @@ const handler = async (msg, { conn, text }) => {
   const videoUrl = `https://www.youtube.com/watch?v=${videoMatch[1]}`
   await conn.sendMessage(msg.key.remoteJid, { react: { text: "🕒", key: msg.key } })
 
-  // obtener info del video exacto
-  const res = await yts({ videoId: videoMatch[1] })
-  const song = res.video
-  if (!song) {
-    return conn.sendMessage(
-      msg.key.remoteJid,
-      { text: "❌ No se pudo obtener información del video." },
-      { quoted: msg }
-    )
-  }
-
-  const { title, timestamp: duration, author, thumbnail } = song
-  const artista = author.name
   let audioDownloadUrl = null
   let apiUsada = "Desconocida"
+  let videoInfo = { title: "Desconocido", thumbnail: "", duration: "Desconocida", author: { name: "Desconocido" } }
 
   const tryDownload = async () => {
     const tryApi = (apiName, urlBuilder) => new Promise(async (resolve, reject) => {
@@ -52,7 +38,16 @@ const handler = async (msg, { conn, text }) => {
         const apiUrl = urlBuilder()
         const r = await axios.get(apiUrl, { timeout: 7000 })
         if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
-          resolve({ url: r.data.result?.url || r.data.data?.url, api: apiName })
+          resolve({
+            url: r.data.result?.url || r.data.data?.url,
+            api: apiName,
+            info: {
+              title: r.data.result?.title || r.data.data?.title || "Desconocido",
+              thumbnail: r.data.result?.thumbnail || r.data.data?.thumbnail || "",
+              duration: r.data.result?.duration || r.data.data?.duration || "Desconocida",
+              author: { name: r.data.result?.author || r.data.data?.author || "Desconocido" }
+            }
+          })
         } else reject(new Error(`${apiName}: No entregó un URL válido`))
       } catch (err) {
         reject(new Error(`${apiName}: ${err.message}`))
@@ -78,7 +73,7 @@ const handler = async (msg, { conn, text }) => {
         }).catch(err => {
           errors.push(err)
           if (errors.length === apis.length && !settled) {
-            reject(new Error("No se pudo obtener el audio de ninguna API"))
+            reject(new Error("❌ No se pudo obtener audio de ninguna API"))
           }
         })
       })
@@ -89,19 +84,20 @@ const handler = async (msg, { conn, text }) => {
     const winner = await tryDownload()
     audioDownloadUrl = winner.url
     apiUsada = winner.api
+    videoInfo = winner.info
 
     await conn.sendMessage(
       msg.key.remoteJid,
       {
-        image: { url: thumbnail },
+        image: { url: videoInfo.thumbnail },
         caption: `
 > *𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
-⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
-⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
-⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
-⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* 128kbps
-⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝚙𝚒:* ${apiUsada}
+⭒ 🎵 - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${videoInfo.title}
+⭒ 🎤 - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${videoInfo.author.name}
+⭒ 🕑 - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${videoInfo.duration}
+⭒ 📺 - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* 128kbps
+⭒ 🌐 - *𝙰𝚙𝚒:* ${apiUsada}
 
 *» 𝘌𝘕𝘝𝘐𝘈𝘕𝘋𝘖 𝘈𝘜𝘋𝘐𝘖  🎧*
 *» 𝘈𝘎𝘜𝘈𝘙𝘋𝘌 𝘜𝘕 𝘗𝘖𝘊𝘖...*
@@ -122,7 +118,7 @@ const handler = async (msg, { conn, text }) => {
           {
             audio: { url: audioDownloadUrl },
             mimetype: "audio/mpeg",
-            fileName: `${title}.mp3`,
+            fileName: `${videoInfo.title}.mp3`,
             ptt: false
           },
           { quoted: msg }
@@ -157,7 +153,7 @@ const handler = async (msg, { conn, text }) => {
         {
           audio: fs.readFileSync(file),
           mimetype: "audio/mpeg",
-          fileName: `${title}.mp3`,
+          fileName: `${videoInfo.title}.mp3`,
           ptt: false
         },
         { quoted: msg }
