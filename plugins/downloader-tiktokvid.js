@@ -1,7 +1,7 @@
 import axios from "axios"
 import yts from "yt-search"
 
-const owners = ["521XXXXXXXXX@s.whatsapp.net", "521YYYYYYYYY@s.whatsapp.net"]
+const owners = ["639301488272@s.whatsapp.net", "521YYYYYYYYY@s.whatsapp.net"]
 
 const handler = async (msg, { conn, text }) => {
   if (!text || !text.trim()) {
