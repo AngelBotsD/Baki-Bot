@@ -1,38 +1,67 @@
-const handler = async (m, { conn }) => {
-  const body = m.text?.trim()
-  if (!body) return
+import { sticker } from '../lib/sticker.js'
+import axios from 'axios'
 
-  if (!/^brat|.brat\s+/i.test(body)) return
+let handler = async (m, { conn, args, usedPrefix, command }) => {
+    let targetUser
+    let text
 
-  const text = body.replace(/^(brat|.brat)\s+/i, "").trim()
-  if (!text) {
-    return m.reply(`☁️ 𝘼𝙂𝙍𝙀𝙂𝘼 𝙏𝙀𝙓𝙏𝙊 𝙋𝘼𝙍𝘼 𝙂𝙀𝙉𝙀𝙍𝘼𝙍 𝙀𝙇 𝙎𝙏𝙄𝘾𝙆𝙀𝙍\n\nEjemplo: brat angelito`)
-  }
+    // Detectar si hay menciones
+    if (m.mentionedJid && m.mentionedJid.length > 0) {
+        targetUser = m.mentionedJid[0]
+        text = args.slice(1).join(' ') // El texto después del @
+    } else if (m.quoted) {
+        targetUser = m.quoted.sender
+        text = args.join(' ')
+    } else {
+        // Si no hay mención ni reply, usar el autor del mensaje
+        targetUser = m.sender
+        text = args.join(' ')
+    }
 
-  try {
-    // reacción ⌛
-    await conn.sendMessage(m.chat, { react: { text: "⌛", key: m.key } })
+    if (!text) return conn.reply(m.chat, `☁️ *Agrega un texto para crear el sticker*`, m)
 
-    const url = `https://api.siputzx.my.id/api/m/brat?text=${encodeURIComponent(text)}`
-    await conn.sendMessage(m.chat, {
-      sticker: { url },
-      packname: "AngelBot",
-      author: "AngelBot",
-    }, { quoted: m })
+    const wordCount = text.trim().split(/\s+/).length
+    if (wordCount > 30) return m.reply('⚠️ *Máximo 30 palabras*')
 
-    // reacción ✅
-    await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } })
-  } catch (e) {
-    console.error(e)
-    await conn.sendMessage(m.chat, { react: { text: "❌", key: m.key } })
-    conn.reply(m.chat, '❌ 𝙀𝙍𝙍𝙊𝙍 𝘼𝙇 𝙂𝙀𝙉𝙀𝙍𝘼𝙍 𝙀𝙇 𝙎𝙏𝙄𝘾𝙆𝙀𝙍', m)
-  }
+    let name = await conn.getName(targetUser)
+    let pp = await conn.profilePictureUrl(targetUser, 'image').catch(_ => 'https://qu.ax/ZJKqt.jpg')
+
+    const obj = {
+        type: "quote",
+        format: "png",
+        backgroundColor: "#000000",
+        width: 512,
+        height: 768,
+        scale: 2,
+        messages: [{
+            entities: [],
+            avatar: true,
+            from: {
+                id: 1,
+                name: name,
+                photo: {
+                    url: pp
+                }
+            },
+            text: text,
+            replyMessage: {}
+        }]
+    }
+
+    const json = await axios.post('https://bot.lyo.su/quote/generate', obj, {
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+
+    const buffer = Buffer.from(json.data.result.image, 'base64')
+    const stiker = await sticker(buffer, false, '', '')
+
+    if (stiker) return conn.sendFile(m.chat, stiker, 'Quotly.webp', '', m)
 }
 
-// igual que play: brat <texto> o .brat <texto>
-handler.customPrefix = /^(brat|.brat)\s+/i
-handler.command = new RegExp
-handler.help = ["brat <texto>"]
-handler.tags = ["sticker"]
+handler.help = ['qc']
+handler.tags = ['sticker']
+handler.command = /^(qc)$/i
 
 export default handler
