@@ -1,5 +1,4 @@
 import axios from "axios"
-import yts from "yt-search"
 import fs from "fs"
 import path from "path"
 import { promisify } from "util"
@@ -21,46 +20,48 @@ const handler = async (msg, { conn, text }) => {
   if (!videoMatch) {
     return conn.sendMessage(
       msg.key.remoteJid,
-      { text: "❌ Solo se aceptan links de YouTube." },
+      { text: "❌ Solo se permite un enlace de YouTube válido." },
       { quoted: msg }
     )
   }
 
-  // ✅ Caso especial: obtener ese video exacto
-  const videoId = videoMatch[1]
-  const res = await yts({ videoId })
-  const song = res.video
+  const videoUrl = `https://www.youtube.com/watch?v=${videoMatch[1]}`
+  await conn.sendMessage(msg.key.remoteJid, { react: { text: "🕒", key: msg.key } })
 
-  if (!song) {
-    return conn.sendMessage(
-      msg.key.remoteJid,
-      { text: "❌ No se pudo obtener información del video." },
-      { quoted: msg }
-    )
-  }
-
-  const { url: videoUrlReal, title, timestamp: duration, author, thumbnail } = song
-  const artista = author.name
   let audioDownloadUrl = null
   let apiUsada = "Desconocida"
+  let title = "Desconocido"
+  let duration = "N/A"
+  let artista = "N/A"
+  let thumbnail = null
 
+  // 🔹 Carrera de APIs
   const tryDownload = async () => {
     const tryApi = (apiName, urlBuilder) => new Promise(async (resolve, reject) => {
       try {
         const apiUrl = urlBuilder()
         const r = await axios.get(apiUrl, { timeout: 7000 })
         if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
+          // Intentamos extraer metadata si existe
+          if (r.data.result?.title) title = r.data.result.title
+          if (r.data.result?.duration) duration = r.data.result.duration
+          if (r.data.result?.author) artista = r.data.result.author
+          if (r.data.result?.thumbnail) thumbnail = r.data.result.thumbnail
+
           resolve({ url: r.data.result?.url || r.data.data?.url, api: apiName })
-        } else reject(new Error(`${apiName}: No entregó un URL válido`))
+        } else {
+          reject(new Error(`${apiName}: No entregó un URL válido`))
+        }
       } catch (err) {
         reject(new Error(`${apiName}: ${err.message}`))
       }
     })
 
     const apis = [
-      tryApi("Api 1M", () => `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrlReal)}&type=mp3&apikey=may-0595dca2`),
-      tryApi("Api 2A", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrlReal)}`),
-      tryApi("Api 3F", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrlReal)}`)
+      tryApi("Api 1M", () => `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp3&apikey=may-0595dca2`),
+      tryApi("Api 2A", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}`),
+      tryApi("Api 3F", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}`),
+      tryApi("Api 4N", () => `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`)
     ]
 
     return new Promise((resolve, reject) => {
@@ -91,7 +92,7 @@ const handler = async (msg, { conn, text }) => {
     await conn.sendMessage(
       msg.key.remoteJid,
       {
-        image: { url: thumbnail },
+        image: { url: thumbnail || "https://i.imgur.com/0Zf7X0F.jpg" },
         caption: `
 > *𝚅𝙸𝙳𝙴𝙾 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
