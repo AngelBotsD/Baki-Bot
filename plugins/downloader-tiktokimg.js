@@ -129,7 +129,7 @@ const handler = async (msg, { conn, text }) => {
         )
       }
     } catch (err) {
-      usarUrlDirecto = true
+      usarUrlDirecto = false
     }
 
     if (!usarUrlDirecto) {
