@@ -1,5 +1,4 @@
 import axios from "axios"
-import yts from "yt-search"
 import fs from "fs"
 import path from "path"
 import { promisify } from "util"
@@ -17,7 +16,7 @@ const handler = async (msg, { conn, text }) => {
     )
   }
 
-  const videoMatch = text.match(/(?:youtu.be\/|youtube.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/)
+  const videoMatch = text.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/)
   if (!videoMatch) {
     return conn.sendMessage(
       msg.key.remoteJid,
@@ -26,23 +25,15 @@ const handler = async (msg, { conn, text }) => {
     )
   }
 
-  const videoUrl = `https://www.youtube.com/watch?v=${videoMatch[1]}`
+  const videoUrlReal = `https://www.youtube.com/watch?v=${videoMatch[1]}`
   await conn.sendMessage(msg.key.remoteJid, { react: { text: "🕒", key: msg.key } })
 
-  const res = await yts({ query: videoUrl, hl: "es", gl: "MX" })
-  const song = res.videos[1]
-  if (!song) {
-    return conn.sendMessage(
-      msg.key.remoteJid,
-      { text: "❌ Sin resultados." },
-      { quoted: msg }
-    )
-  }
-
-  const { url: videoUrlReal, title, timestamp: duration, author, thumbnail } = song
-  const artista = author.name
   let audioDownloadUrl = null
   let apiUsada = "Desconocida"
+  let title = "Desconocido"
+  let artista = "Desconocido"
+  let duration = "?"
+  let thumbnail = `https://img.youtube.com/vi/${videoMatch[1]}/hqdefault.jpg`
 
   const tryDownload = async () => {
     const tryApi = (apiName, urlBuilder) => new Promise(async (resolve, reject) => {
