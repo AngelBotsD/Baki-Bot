@@ -21,20 +21,20 @@ const handler = async (msg, { conn, text }) => {
   if (!videoMatch) {
     return conn.sendMessage(
       msg.key.remoteJid,
-      { text: "❌ Solo se permite un enlace de YouTube válido." },
+      { text: "❌ Solo se aceptan links de YouTube." },
       { quoted: msg }
     )
   }
 
-  const videoUrl = `https://www.youtube.com/watch?v=${videoMatch[1]}`
-  await conn.sendMessage(msg.key.remoteJid, { react: { text: "🕒", key: msg.key } })
+  // ✅ Caso especial: obtener ese video exacto
+  const videoId = videoMatch[1]
+  const res = await yts({ videoId })
+  const song = res.video
 
-  const res = await yts({ query: videoUrl, hl: "es", gl: "MX" })
-  const song = res.videos[0]
   if (!song) {
     return conn.sendMessage(
       msg.key.remoteJid,
-      { text: "❌ Sin resultados." },
+      { text: "❌ No se pudo obtener información del video." },
       { quoted: msg }
     )
   }
@@ -106,7 +106,7 @@ const handler = async (msg, { conn, text }) => {
 
 ⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
 
-> \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 𝗁𝖾𝗋𝗇𝖺𝗻𝖽𝖾𝗓.𝗑𝗒𝗓\`\`\`
+> \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 𝗁𝖾𝗋𝗇𝖺𝗇𝖽𝖾𝗓.𝗑𝗒𝗓\`\`\`
         `.trim()
       },
       { quoted: msg }
