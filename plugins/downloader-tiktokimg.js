@@ -63,24 +63,35 @@ const handler = async (msg, { conn, text }) => {
       tryApi("Api 3F", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrlReal)}`)
     ]
 
-    return new Promise((resolve, reject) => {
-      let settled = false
-      let errors = []
-
-      apis.forEach(p => {
-        p.then(result => {
-          if (!settled) {
-            settled = true
-            resolve(result)
-          }
-        }).catch(err => {
-          errors.push(err)
-          if (errors.length === apis.length && !settled) {
-            reject(new Error("No se pudo obtener el audio de ninguna API"))
-          }
+    let lastError
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        return await new Promise((resolve, reject) => {
+          let settled = false
+          let errors = []
+          apis.forEach(p => {
+            p.then(result => {
+              if (!settled) {
+                settled = true
+                resolve(result)
+              }
+            }).catch(err => {
+              errors.push(err)
+              if (errors.length === apis.length && !settled) {
+                reject(new Error("No se pudo obtener el audio de ninguna API"))
+              }
+            })
+          })
         })
-      })
-    })
+      } catch (err) {
+        lastError = err
+        if (attempt === 1) {
+          // 🔄 reaccionamos en el PRIMER fallo antes del segundo intento
+          await conn.sendMessage(msg.key.remoteJid, { react: { text: "🔄", key: msg.key } })
+        }
+        if (attempt === 2) throw lastError
+      }
+    }
   }
 
   try {
@@ -106,7 +117,7 @@ const handler = async (msg, { conn, text }) => {
 
 ⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
 
-> \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 𝗁𝖾𝗋𝗇𝖺𝗻𝖽𝖾𝗓.𝗑𝗒𝗓\`\`\`
+> \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 𝗁𝖾𝗋𝗇𝖺𝗇𝖽𝖾𝗓.𝗑𝗒𝗓\`\`\`
 `.trim()
       },
       { quoted: msg }
