@@ -38,7 +38,7 @@ const handler = async (msg, { conn, text }) => {
     const tryApi = (apiName, urlBuilder) => new Promise(async (resolve, reject) => {
       try {
         const apiUrl = urlBuilder()
-        const r = await axios.get(apiUrl, { timeout: 9000 })
+        const r = await axios.get(apiUrl, { timeout: 7000 })
         if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
           resolve({ url: r.data.result?.url || r.data.data?.url, api: apiName })
         } else reject(new Error(`${apiName}: No entregó un URL válido`))
@@ -51,7 +51,7 @@ const handler = async (msg, { conn, text }) => {
       tryApi("Api 1M", () => `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp3&apikey=may-0595dca2`),
       tryApi("Api 2A", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}`),
       tryApi("Api 3F", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}`),
-      tryApi("Neoxr", () => `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=any&apikey=russellxz`)
+      tryApi("Neoxr", () => `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`)
     ]
 
     return new Promise((resolve, reject) => {
@@ -89,7 +89,7 @@ const handler = async (msg, { conn, text }) => {
 ⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
 ⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
-⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* Auto
+⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* 128kbps
 ⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝚙𝚒:* ${apiUsada}
 
 *» 𝘌𝘕𝘝𝘐𝘈𝘕𝘋𝘖 𝘈𝘜𝘋𝘐𝘖  🎧*
@@ -97,7 +97,7 @@ const handler = async (msg, { conn, text }) => {
 
 ⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
 
-> \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 𝗁𝖾𝗋𝗇𝖺𝗇𝖽𝖾𝗓.𝗑𝗒𝗓\`\`\`
+> \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 𝗁𝖾𝗋𝗇𝖺𝗻𝖽𝖾𝗓.𝗑𝗒𝗓\`\`\`
           `.trim()
       },
       { quoted: msg }
