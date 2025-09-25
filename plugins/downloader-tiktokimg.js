@@ -39,7 +39,7 @@ const handler = async (msg, { conn, text }) => {
     const tryApi = (apiName, urlBuilder) => new Promise(async (resolve, reject) => {
       try {
         const apiUrl = urlBuilder()
-        const r = await axios.get(apiUrl, { timeout: 9000 })
+        const r = await axios.get(apiUrl, { timeout: 11000 }) // ⏱️ 11s
         if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
           resolve({ url: r.data.result?.url || r.data.data?.url, api: apiName })
         } else reject(new Error(`${apiName}: No entregó un URL válido`))
@@ -55,7 +55,7 @@ const handler = async (msg, { conn, text }) => {
     ]
 
     let lastError
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    for (let attempt = 1; attempt <= 3; attempt++) { // 🔄 ahora 3 intentos
       try {
         return await new Promise((resolve, reject) => {
           let settled = false
@@ -76,11 +76,10 @@ const handler = async (msg, { conn, text }) => {
         })
       } catch (err) {
         lastError = err
-        if (attempt === 1) {
-          // 🔄 reaccionamos en el PRIMER fallo antes del segundo intento
+        if (attempt < 3) { // 🔄 reaccionar solo en fallos antes del último intento
           await conn.sendMessage(msg.key.remoteJid, { react: { text: "🔄", key: msg.key } })
         }
-        if (attempt === 2) throw lastError
+        if (attempt === 3) throw lastError
       }
     }
   }
@@ -89,6 +88,18 @@ const handler = async (msg, { conn, text }) => {
     const winner = await tryDownload()
     audioDownloadUrl = winner.url
     apiUsada = winner.api
+
+    // 🔧 Intento de obtener info del video
+    try {
+      const infoApi = `https://yt-api-cin.onrender.com/api/info?url=${encodeURIComponent(videoUrlReal)}`
+      const info = (await axios.get(infoApi)).data
+      title = info.title || "Desconocido"
+      artista = info.channel || "Desconocido"
+      duration = info.duration || "?"
+      thumbnail = info.thumbnail || thumbnail
+    } catch (e) {
+      // si falla, quedan valores por defecto
+    }
 
     await conn.sendMessage(
       msg.key.remoteJid,
@@ -104,7 +115,7 @@ const handler = async (msg, { conn, text }) => {
 ⭒ ִֶָ७ ꯭🌐˙⋆｡ - 𝙰𝚙𝚒: ${apiUsada}
 
 » 𝘌𝘕𝘝𝘐𝘈𝘕𝘋𝘖 𝘈𝘜𝘋𝘐𝘖  🎧
-» 𝘈𝘎𝘜𝘈𝘙𝘋𝘌 𝘜𝘕 𝘗𝘖𝘊𝘖...
+» 𝘈𝘎𝘜𝘈𝘙𝘋𝘓𝘌 𝘜𝘕 𝘗𝘖𝘊𝘖...
 
 ⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
 
