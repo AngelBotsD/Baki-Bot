@@ -39,7 +39,7 @@ const handler = async (msg, { conn, text }) => {
     const tryApi = (apiName, urlBuilder) => new Promise(async (resolve, reject) => {
       try {
         const apiUrl = urlBuilder()
-        const r = await axios.get(apiUrl, { timeout: 7000 })
+        const r = await axios.get(apiUrl, { timeout: 9000 })
         if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
           resolve({ url: r.data.result?.url || r.data.data?.url, api: apiName })
         } else reject(new Error(`${apiName}: No entregó un URL válido`))
