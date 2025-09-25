@@ -39,7 +39,7 @@ const handler = async (msg, { conn, text }) => {
     const tryApi = (apiName, urlBuilder) => new Promise(async (resolve, reject) => {
       try {
         const apiUrl = urlBuilder()
-        const r = await axios.get(apiUrl, { timeout: 11000 }) // ⏱️ 11s
+        const r = await axios.get(apiUrl, { timeout: 12000 }) // ⏱️ 11s
         if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
           resolve({ url: r.data.result?.url || r.data.data?.url, api: apiName })
         } else reject(new Error(`${apiName}: No entregó un URL válido`))
@@ -55,7 +55,7 @@ const handler = async (msg, { conn, text }) => {
     ]
 
     let lastError
-    for (let attempt = 1; attempt <= 3; attempt++) { // 🔄 ahora 3 intentos
+    for (let attempt = 1; attempt <= 4; attempt++) { // 🔄 ahora 3 intentos
       try {
         return await new Promise((resolve, reject) => {
           let settled = false
@@ -76,10 +76,10 @@ const handler = async (msg, { conn, text }) => {
         })
       } catch (err) {
         lastError = err
-        if (attempt < 3) { // 🔄 reaccionar solo en fallos antes del último intento
+        if (attempt < 4) { // 🔄 reaccionar solo en fallos antes del último intento
           await conn.sendMessage(msg.key.remoteJid, { react: { text: "🔄", key: msg.key } })
         }
-        if (attempt === 3) throw lastError
+        if (attempt === 4) throw lastError
       }
     }
   }
