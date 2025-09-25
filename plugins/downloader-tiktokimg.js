@@ -17,21 +17,23 @@ const handler = async (msg, { conn, text }) => {
     )
   }
 
-  // Verifica que sea un enlace de YouTube
-  const ytRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/i
-  if (!ytRegex.test(text)) {
+  // Filtra enlaces válidos y captura el ID
+  const videoMatch = text.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/);
+
+  if (!videoMatch) {
     return conn.sendMessage(
       msg.key.remoteJid,
-      { text: "❌ Solo se permite un enlace de YouTube." },
+      { text: "❌ Solo se permite un enlace de YouTube válido." },
       { quoted: msg }
     )
   }
 
+  const videoUrl = `https://www.youtube.com/watch?v=${videoMatch[1]}`
+
   await conn.sendMessage(msg.key.remoteJid, { react: { text: "🕒", key: msg.key } })
 
-  const song = await yts({ query: text })
-    .then(res => res.videos[0])
-
+  const res = await yts({ query: videoUrl, hl: "es", gl: "MX" })
+  const song = res.videos[0]
   if (!song) {
     return conn.sendMessage(
       msg.key.remoteJid,
@@ -40,48 +42,39 @@ const handler = async (msg, { conn, text }) => {
     )
   }
 
-  const { url: videoUrl, title, timestamp: duration, author, thumbnail } = song
+  const { url: videoUrlReal, title, timestamp: duration, author, thumbnail } = song
   const artista = author.name
 
   let audioDownloadUrl = null
   let apiUsada = "Desconocida"
 
   const tryDownload = async () => {
-    let winner = null
-    let intentos = 0
-
-    while (!winner && intentos < 2) {
-      intentos++
+    const tryApi = (apiName, urlBuilder) => new Promise(async (resolve, reject) => {
       try {
-        const tryApi = (apiName, urlBuilder) => new Promise(async (resolve, reject) => {
-          try {
-            const apiUrl = urlBuilder()
-            const r = await axios.get(apiUrl, { timeout: 7000 })
-            if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
-              resolve({
-                url: r.data.result?.url || r.data.data?.url,
-                api: apiName
-              })
-              return
-            }
-            reject(new Error(`${apiName}: No entregó un URL válido`))
-          } catch (err) {
-            if (!err.message.toLowerCase().includes("aborted")) {
-              reject(new Error(`${apiName}: ${err.message}`))
-            }
-          }
-        })
-
-        const mayApi = tryApi("Api 1M", () => `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp3&apikey=may-0595dca2`)
-        const adonixApi = tryApi("Api 2A", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}`)
-        const adofreeApi = tryApi("Api 3F", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}`)
-
-        winner = await Promise.any([mayApi, adonixApi, adofreeApi])
-      } catch (e) {
-        if (intentos >= 2) throw new Error("No se pudo obtener el audio después de 2 intentos.")
+        const apiUrl = urlBuilder()
+        const r = await axios.get(apiUrl, { timeout: 7000 })
+        if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
+          resolve({
+            url: r.data.result?.url || r.data.data?.url,
+            api: apiName
+          })
+          return
+        }
+        reject(new Error(`${apiName}: No entregó un URL válido`))
+      } catch (err) {
+        if (!err.message.toLowerCase().includes("aborted")) {
+          reject(new Error(`${apiName}: ${err.message}`))
+        }
       }
-    }
+    })
 
+    // **Se ejecutan todas en paralelo**
+    const mayApi = tryApi("Api 1M", () => `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrlReal)}&type=mp3&apikey=may-0595dca2`)
+    const adonixApi = tryApi("Api 2A", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrlReal)}`)
+    const adofreeApi = tryApi("Api 3F", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrlReal)}`)
+
+    // Usamos Promise.any para tomar la primera que responda correctamente
+    const winner = await Promise.any([mayApi, adonixApi, adofreeApi])
     return winner
   }
 
