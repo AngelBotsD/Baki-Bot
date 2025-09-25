@@ -17,9 +17,7 @@ const handler = async (msg, { conn, text }) => {
     )
   }
 
-  // Filtra enlaces válidos y captura el ID
-  const videoMatch = text.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/);
-
+  const videoMatch = text.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/)
   if (!videoMatch) {
     return conn.sendMessage(
       msg.key.remoteJid,
@@ -29,7 +27,6 @@ const handler = async (msg, { conn, text }) => {
   }
 
   const videoUrl = `https://www.youtube.com/watch?v=${videoMatch[1]}`
-
   await conn.sendMessage(msg.key.remoteJid, { react: { text: "🕒", key: msg.key } })
 
   const res = await yts({ query: videoUrl, hl: "es", gl: "MX" })
@@ -44,7 +41,6 @@ const handler = async (msg, { conn, text }) => {
 
   const { url: videoUrlReal, title, timestamp: duration, author, thumbnail } = song
   const artista = author.name
-
   let audioDownloadUrl = null
   let apiUsada = "Desconocida"
 
@@ -54,28 +50,37 @@ const handler = async (msg, { conn, text }) => {
         const apiUrl = urlBuilder()
         const r = await axios.get(apiUrl, { timeout: 7000 })
         if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
-          resolve({
-            url: r.data.result?.url || r.data.data?.url,
-            api: apiName
-          })
-          return
-        }
-        reject(new Error(`${apiName}: No entregó un URL válido`))
+          resolve({ url: r.data.result?.url || r.data.data?.url, api: apiName })
+        } else reject(new Error(`${apiName}: No entregó un URL válido`))
       } catch (err) {
-        if (!err.message.toLowerCase().includes("aborted")) {
-          reject(new Error(`${apiName}: ${err.message}`))
-        }
+        reject(new Error(`${apiName}: ${err.message}`))
       }
     })
 
-    // **Se ejecutan todas en paralelo**
-    const mayApi = tryApi("Api 1M", () => `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrlReal)}&type=mp3&apikey=may-0595dca2`)
-    const adonixApi = tryApi("Api 2A", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrlReal)}`)
-    const adofreeApi = tryApi("Api 3F", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrlReal)}`)
+    const apis = [
+      tryApi("Api 1M", () => `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrlReal)}&type=mp3&apikey=may-0595dca2`),
+      tryApi("Api 2A", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrlReal)}`),
+      tryApi("Api 3F", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrlReal)}`)
+    ]
 
-    // Usamos Promise.any para tomar la primera que responda correctamente
-    const winner = await Promise.any([mayApi, adonixApi, adofreeApi])
-    return winner
+    return new Promise((resolve, reject) => {
+      let settled = false
+      let errors = []
+
+      apis.forEach(p => {
+        p.then(result => {
+          if (!settled) {
+            settled = true
+            resolve(result)
+          }
+        }).catch(err => {
+          errors.push(err)
+          if (errors.length === apis.length && !settled) {
+            reject(new Error("No se pudo obtener el audio de ninguna API"))
+          }
+        })
+      })
+    })
   }
 
   try {
@@ -178,5 +183,5 @@ const handler = async (msg, { conn, text }) => {
   }
 }
 
-handler.command = ["ytmp3"]
+handler.command = ["play"]
 export default handler
