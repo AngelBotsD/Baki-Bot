@@ -183,5 +183,5 @@ const handler = async (msg, { conn, text }) => {
   }
 }
 
-handler.command = [".ytmp3"]
+handler.command = ["ytmp3"]
 export default handler
