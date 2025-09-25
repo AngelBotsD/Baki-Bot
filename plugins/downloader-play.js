@@ -36,42 +36,42 @@ const handler = async (msg, { conn, text }) => {
   let apiUsada = "Desconocida"
 
   const tryDownload = async () => {
-    let winner = null
-    let intentos = 0
-
-    while (!winner && intentos < 2) {
-      intentos++
+    const tryApi = (apiName, urlBuilder) => new Promise(async (resolve, reject) => {
       try {
-        const tryApi = (apiName, urlBuilder) => new Promise(async (resolve, reject) => {
-          try {
-            const apiUrl = urlBuilder()
-            const r = await axios.get(apiUrl, { timeout: 7000 })
-            if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
-              resolve({
-                url: r.data.result?.url || r.data.data?.url,
-                api: apiName
-              })
-              return
-            }
-            reject(new Error(`${apiName}: No entregó un URL válido`))
-          } catch (err) {
-            if (!err.message.toLowerCase().includes("aborted")) {
-              reject(new Error(`${apiName}: ${err.message}`))
-            }
+        const apiUrl = urlBuilder()
+        const r = await axios.get(apiUrl, { timeout: 7000 })
+        if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
+          resolve({ url: r.data.result?.url || r.data.data?.url, api: apiName })
+        } else reject(new Error(`${apiName}: No entregó un URL válido`))
+      } catch (err) {
+        reject(new Error(`${apiName}: ${err.message}`))
+      }
+    })
+
+    const apis = [
+      tryApi("Api 1M", () => `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp3&apikey=may-0595dca2`),
+      tryApi("Api 2A", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}`),
+      tryApi("Api 3F", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}`)
+    ]
+
+    return new Promise((resolve, reject) => {
+      let settled = false
+      let errors = []
+
+      apis.forEach(p => {
+        p.then(result => {
+          if (!settled) {
+            settled = true
+            resolve(result)
+          }
+        }).catch(err => {
+          errors.push(err)
+          if (errors.length === apis.length && !settled) {
+            reject(new Error("No se pudo obtener el audio de ninguna API"))
           }
         })
-
-        const mayApi = tryApi("Api 1M", () => `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp3&apikey=may-0595dca2`)
-        const adonixApi = tryApi("Api 2A", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}`)
-        const adofreeApi = tryApi("Api 3F", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}`)
-
-        winner = await Promise.any([mayApi, adonixApi, adofreeApi])
-      } catch (e) {
-        if (intentos >= 2) throw new Error("No se pudo obtener el audio después de 2 intentos.")
-      }
-    }
-
-    return winner
+      })
+    })
   }
 
   try {
@@ -97,7 +97,7 @@ const handler = async (msg, { conn, text }) => {
 
 ⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
 
-> \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 𝗁𝖾𝗋𝗇𝖺𝗇𝖽𝖾𝗓.𝗑𝗒𝗓\`\`\`
+> \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 𝗁𝖾𝗋𝗇𝖺𝗻𝖽𝖾𝗓.𝗑𝗒𝗓\`\`\`
           `.trim()
       },
       { quoted: msg }
