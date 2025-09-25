@@ -86,6 +86,14 @@ const handler = async (msg, { conn, text }) => {
     apiUsada = winner.api
     videoInfo = winner.info
 
+    if (!audioDownloadUrl) {
+      return conn.sendMessage(
+        msg.key.remoteJid,
+        { text: "❌ No se pudo obtener audio del video." },
+        { quoted: msg }
+      )
+    }
+
     await conn.sendMessage(
       msg.key.remoteJid,
       {
