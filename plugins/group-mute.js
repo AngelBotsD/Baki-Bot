@@ -2,11 +2,7 @@ import fetch from 'node-fetch'
 
 let mutedUsers = new Set()
 
-let handler = async (m, { conn, command, isAdmin, isOwner, isBotAdmin }) => {
-  if (!m.isGroup) return global.dfail?.('group', m, conn)
-  if (!isAdmin && !isOwner) return global.dfail?.('admin', m, conn)
-  if (!isBotAdmin) return global.dfail?.('botAdmin', m, conn)
-
+let handler = async (m, { conn, command }) => {
   const user = m.quoted?.sender || m.mentionedJid?.[0]
   if (!user) return m.reply('⚠️ Usa: .mute @usuario o responde a su mensaje.')
   if (user === m.sender) return m.reply('❌ No puedes mutearte a ti mismo.')
@@ -32,7 +28,7 @@ let handler = async (m, { conn, command, isAdmin, isOwner, isBotAdmin }) => {
     mutedUsers.add(user)
     await conn.sendMessage(
       m.chat,
-      { text: '*Usuario mutado - Sus mensajes serán eliminados*' },
+      { text: '*Usuario mutado - Todos sus mensajes y comandos serán bloqueados*' },
       { quoted: preview, mentions: [user] }
     )
   } else {
@@ -40,19 +36,25 @@ let handler = async (m, { conn, command, isAdmin, isOwner, isBotAdmin }) => {
     mutedUsers.delete(user)
     await conn.sendMessage(
       m.chat,
-      { text: '*Usuario desmuteado - Sus mensajes ya no serán eliminados*' },
+      { text: '*Usuario desmuteado - Ya puede usar el bot normalmente*' },
       { quoted: preview, mentions: [user] }
     )
   }
 }
 
+// Antes de procesar cualquier mensaje
 handler.before = async (m, { conn }) => {
   if (!m.isGroup || m.fromMe) return
   const user = m.sender
 
-  // Borrado instantáneo al ritmo del spam
+  // Si está muteado → borrar mensajes normales y comandos
   if (mutedUsers.has(user)) {
     try {
+      // Si es comando, lo bloqueamos
+      if (m.text && m.text.startsWith(global.prefix || '.')) {
+        return !1 // no deja ejecutar nada
+      }
+      // Borrar mensaje normal
       await conn.sendMessage(m.chat, { delete: m.key })
     } catch (e) {
       console.error('Error eliminando mensaje:', e)
@@ -64,6 +66,5 @@ handler.help = ['mute @usuario', 'unmute @usuario']
 handler.tags = ['group']
 handler.command = /^(mute|unmute)$/i
 handler.group = true
-handler.admin = true
 
 export default handler
