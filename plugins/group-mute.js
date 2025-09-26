@@ -62,9 +62,9 @@ handler.before = async (m, { conn }) => {
   }
 }
 
-handler.help = ['mute @usuario', 'unmute @usuario']
+handler.help = ['mute @usuario', 'unmute @usuario'];
 handler.tags = ['group']
-handler.command = /^(mute|unmute)$/i
-handler.group = true
-
-export default handler
+handler.command = /^(mute|unmute)$/i:
+handler.group = true;
+handler.admin = true;
+export default handler;
