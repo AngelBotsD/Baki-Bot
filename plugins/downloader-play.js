@@ -25,7 +25,6 @@ const handler = async (msg, { conn, text }) => {
   const { url: videoUrl, title, timestamp: duration, author, thumbnail } = song;
   const artista = author.name;
 
-  // 🔹 Ahora acepta .mp3, .m4a, .opus y .webm
   const extractUrl = (data) => {
     const search = (obj) => {
       if (!obj) return null;
@@ -93,7 +92,7 @@ const handler = async (msg, { conn, text }) => {
 ⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
 ⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
-⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* 64kbps
+⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* 128kbps
 ⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝚙𝚒:* ${winner.api}
 
 *» 𝘌𝘕𝘝𝘐𝘈𝘕𝘋𝘖 𝘈𝘜𝘋𝘐𝘖  🎧*
