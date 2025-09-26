@@ -12,7 +12,6 @@ const handler = async (msg, { conn, text }) => {
 
   await conn.sendMessage(msg.key.remoteJid, { react: { text: "🕒", key: msg.key } });
 
-  // Buscar video
   const res = await yts({ query: text, hl: "es", gl: "MX" });
   const song = res.videos[0];
   if (!song) {
@@ -26,10 +25,9 @@ const handler = async (msg, { conn, text }) => {
   const { url: videoUrl, title, timestamp: duration, author, thumbnail } = song;
   const artista = author.name;
 
-  // Función para intentar con varias APIs
   const tryApi = async (apiName, urlBuilder) => {
     try {
-      const r = await axios.get(urlBuilder(), { timeout: 7000 });
+      const r = await axios.get(urlBuilder(), { timeout: 6000 });
       const audioUrl = r.data?.result?.url || r.data?.data?.url;
       if (audioUrl) return { url: audioUrl, api: apiName };
       throw new Error(`${apiName}: No entregó URL válido`);
@@ -50,7 +48,6 @@ const handler = async (msg, { conn, text }) => {
     const winner = await Promise.any(apis.map(api => api()));
     const audioDownloadUrl = winner.url;
 
-    // Mensaje único con info + audio + API ganadora
     await conn.sendMessage(
       msg.key.remoteJid,
       {
@@ -75,7 +72,6 @@ const handler = async (msg, { conn, text }) => {
       { quoted: msg }
     );
 
-    // Enviar audio
     await conn.sendMessage(
       msg.key.remoteJid,
       {
