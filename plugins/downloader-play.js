@@ -47,9 +47,9 @@ const handler = async (msg, { conn, text }) => {
   };
 
   const apis = [
-    () => axios.get(`https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp3&apikey=may-0595dca2`, { timeout: 7000 }).then(r => ({ url: r.data?.result?.url || r.data?.data?.url, api: "Api 1M" })),
-    () => axios.get(`https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}`, { timeout: 7000 }).then(r => ({ url: r.data?.result?.url || r.data?.data?.url, api: "Api 2A" })),
-    () => axios.get(`https://api-adonix.ultraplus.click/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}`, { timeout: 7000 }).then(r => ({ url: r.data?.result?.url || r.data?.data?.url, api: "Api 3F" }))
+    () => axios.get(`https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp3&apikey=may-0595dca2`, { timeout: 9000 }).then(r => ({ url: r.data?.result?.url || r.data?.data?.url, api: "Api 1M" })),
+    () => axios.get(`https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}`, { timeout: 9000 }).then(r => ({ url: r.data?.result?.url || r.data?.data?.url, api: "Api 2A" })),
+    () => axios.get(`https://api-adonix.ultraplus.click/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}`, { timeout: 9000 }).then(r => ({ url: r.data?.result?.url || r.data?.data?.url, api: "Api 3F" }))
   ];
 
   try {
