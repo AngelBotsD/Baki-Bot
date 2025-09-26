@@ -4,12 +4,21 @@ let handler = async (m, { conn, text, participants, command }) => {
     let total = 0
     let sider = []
 
+    // ID del bot (solo números antes del @)
+    const botId = conn.user.jid.split('@')[0]
+
     for (let i = 0; i < sum; i++) {
         let users = m.isGroup ? participants.find(u => u.id == member[i]) : {}
         let userData = global.db.data.users[member[i]]
+        let memberId = member[i].split('@')[0]
 
         // Ignorar al bot
-        if (member[i] !== conn.user.jid && (typeof userData === 'undefined' || userData.chat === 0) && !users?.isAdmin && !users?.isSuperAdmin) {
+        if (
+            memberId !== botId &&
+            (typeof userData === 'undefined' || userData.chat === 0) &&
+            !users?.isAdmin &&
+            !users?.isSuperAdmin
+        ) {
             if (typeof userData !== 'undefined') {
                 if (userData.whitelist === false) {
                     total++
