@@ -1,55 +1,166 @@
-let handler = async (m, { conn, text, participants, command }) => {
-    let member = participants.map(u => u.id)
-    let sum = !text ? member.length : text
-    let total = 0
-    let sider = []
+// plugins/fantasmas.mjs
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-    const botId = conn.user.jid.split('@')[0]
-    const now = Date.now()
-    const maxInactivity = 72 * 60 * 60 * 1000 // 72 horas
+// Solo necesario si usas __dirname en ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-    for (let i = 0; i < sum; i++) {
-        let users = m.isGroup ? participants.find(u => u.id == member[i]) : {}
-        let userData = global.db.data.users[member[i]]
-        let memberId = member[i].split('@')[0]
+const DIGITS = (s = "") => String(s).replace(/\D/g, "");
 
-        // Ignorar al bot
-        if (memberId === botId) continue
-
-        // Ignorar admins
-        if (users?.isAdmin || users?.isSuperAdmin) continue
-
-        // Si nunca habló
-        if (!userData || !userData.lastSeen) {
-            total++
-            sider.push(member[i])
-            continue
-        }
-
-        // Si habló hace más de 72h
-        if (now - userData.lastSeen >= maxInactivity) {
-            total++
-            sider.push(member[i])
-        }
-    }
-
-    if (total === 0) return conn.reply(m.chat, `*[❗INFO❗]* Nadie lleva más de 72 horas inactivo en este grupo.`, m)
-
-    if (command === 'fankick') {
-        await conn.groupParticipantsUpdate(m.chat, sider, 'remove')
-        let eliminados = sider.map(v => '@' + v.replace(/@.+/, '')).join('\n')
-        return conn.reply(m.chat, `*Fantasmas eliminados (inactivos +72h):*\n${eliminados}`, null, { mentions: sider })
-    }
-
-    let mensaje = `[ ⚠ 𝙍𝙀𝙑𝙄𝙎𝙄𝙊𝙉 𝙄𝙉𝘼𝘾𝙏𝙄𝙑𝘼 ⚠ ]\n\n𝐆𝐑𝐔𝐏𝐎: ${await conn.getName(m.chat)}\n𝐌𝐈𝐄𝐌𝐁𝐑𝐎𝐒: ${sum}\n\n[ ⇲ 𝙇𝙄𝙎𝙏𝘼 𝘿𝙀 𝙁𝘼𝙉𝙏𝘼𝙎𝙈𝘼𝙎 (72h+) ⇱ ]\n${sider.map(v => '  👻 @' + v.replace(/@.+/, '')).join('\n')}`
-
-    mensaje += `\n\n*_ELIMINANDOS COMO NO SE ACTIVEN_*\n⏰ Criterio: inactividad mayor a *72 horas*\n\n🧹 *Si deseas eliminar a todos los fantasmas, ejecuta:*\n.fankick`
-
-    conn.reply(m.chat, mensaje, null, { mentions: sider })
+/** Normaliza: si un participante viene como @lid y tiene .jid (real), usa ese real */
+function lidParser(participants = []) {
+  try {
+    return participants.map(v => ({
+      id: (typeof v?.id === "string" && v.id.endsWith("@lid") && v.jid)
+        ? v.jid
+        : v.id,
+      admin: v?.admin ?? null,
+      raw: v
+    }));
+  } catch {
+    return participants || [];
+  }
 }
 
-handler.help = ['fantasmas', 'fankick']
-handler.tags = ['group']
-handler.command = /^(verfantasmas|fantasmas|sider|fankick)$/i
-handler.admin = true
-export default handler
+/** ¿Es admin por NÚMERO? (sirve en LID y no-LID) */
+async function isAdminByNumber(conn, chatId, number) {
+  try {
+    const meta = await conn.groupMetadata(chatId);
+    const raw  = Array.isArray(meta?.participants) ? meta.participants : [];
+    const norm = lidParser(raw);
+
+    for (let i = 0; i < raw.length; i++) {
+      const r = raw[i], n = norm[i];
+      const isAdm = (r?.admin === "admin" || r?.admin === "superadmin" ||
+                     n?.admin === "admin" || n?.admin === "superadmin");
+      if (!isAdm) continue;
+      const ids = [r?.id, r?.jid, n?.id];
+      if (ids.some(x => DIGITS(x || "") === number)) return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/** Obtiene el conteo para un participante, priorizando el JID real guardado en chatCount */
+function getCountForParticipant(pRaw, pNormId, chatCount) {
+  const candidates = new Set();
+
+  if (typeof pNormId === "string" && pNormId.endsWith("@s.whatsapp.net")) {
+    candidates.add(pNormId);
+  }
+
+  if (typeof pRaw?.id === "string") candidates.add(pRaw.id);
+
+  const d = DIGITS(pNormId || pRaw?.id || "");
+  if (d) candidates.add(`${d}@s.whatsapp.net`);
+
+  for (const key of candidates) {
+    const val = parseInt(chatCount[key]);
+    if (!Number.isNaN(val)) return val;
+  }
+  return 0;
+}
+
+const handler = async (msg, { conn, args }) => {
+  const chatId    = msg.key.remoteJid;
+  const isGroup   = chatId.endsWith("@g.us");
+  const senderId  = msg.key.participant || msg.key.remoteJid;
+  const senderNum = DIGITS(senderId);
+
+  if (!isGroup) {
+    await conn.sendMessage(chatId, { text: "❌ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
+    return;
+  }
+
+  const isAdmin = await isAdminByNumber(conn, chatId, senderNum);
+
+  const ownerPath = path.resolve("owner.json");
+  const owners = fs.existsSync(ownerPath)
+    ? JSON.parse(fs.readFileSync(ownerPath, "utf-8"))
+    : (global.owner || []);
+  const isOwner = Array.isArray(owners) && owners.some(([id]) => id === senderNum);
+
+  if (!isAdmin && !isOwner) {
+    await conn.sendMessage(chatId, { text: "⛔ *Solo administradores o dueños del bot pueden usar este comando.*" }, { quoted: msg });
+    return;
+  }
+
+  const limite = parseInt(args[0]);
+  if (Number.isNaN(limite)) {
+    await conn.sendMessage(chatId, {
+      text: "❓ *Debes escribir un número de mensajes para detectar fantasmas.*\n\nEjemplo: `.fantasmas 10`"
+    }, { quoted: msg });
+    return;
+  }
+
+  const filePath = path.resolve("setwelcome.json");
+  const data = fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, "utf-8")) : {};
+  const chatData = data[chatId]?.chatCount || {};
+
+  const metadata = await conn.groupMetadata(chatId);
+  const participantsRaw = Array.isArray(metadata?.participants) ? metadata.participants : [];
+  const participantsNorm = lidParser(participantsRaw);
+
+  const fantasmasObjs = [];
+  for (let i = 0; i < participantsRaw.length; i++) {
+    const pRaw = participantsRaw[i];
+    const pNormId = participantsNorm[i]?.id;
+    const count = getCountForParticipant(pRaw, pNormId, chatData);
+
+    if (count < limite) {
+      const visibleMentionJid = pRaw.id;
+      fantasmasObjs.push({
+        visibleMentionJid,
+        placeholder: `@${(visibleMentionJid || "").split("@")[0]}`,
+        count
+      });
+    }
+  }
+
+  const advertencia =
+`⚠️ *Advertencia Importante*
+Este conteo solo se basa en los mensajes detectados desde que fue agregada al grupo.
+No refleja actividad real de todo el historial del grupo. Podría mostrar como fantasmas a miembros valiosos que simplemente no han hablado aún.
+
+Usa este comando con inteligencia 💡. Si planeas expulsar con *.fankick*, asegúrate de entender este límite.
+
+`;
+
+  if (fantasmasObjs.length === 0) {
+    await conn.sendMessage(chatId, {
+      text: `✅ *Todos los miembros han enviado más de ${limite} mensajes.*`
+    }, { quoted: msg });
+    return;
+  }
+
+  const listado =
+    fantasmasObjs
+      .map((u, i) => `│ ${i + 1}. ${u.placeholder}`)
+      .join("\n");
+
+  const texto =
+`${advertencia}👻 *Total de fantasmas detectados:* ${fantasmasObjs.length} usuarios
+📝 *Han enviado menos de ${limite} mensajes desde que el bot está en el grupo:*
+
+╭───────────────◆
+${listado}
+╰───────────────◆
+
+🗑️ Usa *.fankick ${limite}* para eliminar automáticamente a estos inactivos.`;
+
+  await conn.sendMessage(
+    chatId,
+    {
+      text: texto,
+      mentions: fantasmasObjs.map(f => f.visibleMentionJid)
+    },
+    { quoted: msg }
+  );
+};
+
+handler.command = ["fantasmas"];
+export default handler;
