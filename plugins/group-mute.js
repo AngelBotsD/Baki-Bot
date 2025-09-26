@@ -20,37 +20,43 @@ let handler = async (m, { conn, command, isAdmin, isOwner, isBotAdmin }) => {
 
   const preview = {
     key: { fromMe: false, participant: '0@s.whatsapp.net', remoteJid: m.chat },
-    message: { locationMessage: { name: command === 'mute' ? 'Usuario mutado' : 'Usuario desmuteado', jpegThumbnail: thumbBuffer } }
+    message: {
+      locationMessage: {
+        name: command === 'mute' ? 'Usuario mutado' : 'Usuario desmuteado',
+        jpegThumbnail: thumbBuffer
+      }
+    }
   }
 
   if (command === 'mute') {
     mutedUsers.add(user)
-    await conn.sendMessage(m.chat, { text: '*Usuario mutado - Tus mensajes serán eliminados*' }, { quoted: preview, mentions: [user] })
+    await conn.sendMessage(
+      m.chat,
+      { text: '*Usuario mutado - Todos sus mensajes serán eliminados al instante*' },
+      { quoted: preview, mentions: [user] }
+    )
   } else {
     if (!mutedUsers.has(user)) return m.reply('⚠️ Ese usuario no está muteado.')
     mutedUsers.delete(user)
-    await conn.sendMessage(m.chat, { text: '*Usuario desmuteado - Tus mensajes ya no serán eliminados*' }, { quoted: preview, mentions: [user] })
+    await conn.sendMessage(
+      m.chat,
+      { text: '*Usuario desmuteado - Sus mensajes ya no serán eliminados*' },
+      { quoted: preview, mentions: [user] }
+    )
   }
 }
 
 handler.before = async (m, { conn }) => {
   if (!m.isGroup || m.fromMe) return
   const user = m.sender
-  const chat = m.chat
 
+  // Si está muteado, borra cada mensaje en cuanto llega
   if (mutedUsers.has(user)) {
-    if (!global.parallelDeleteQueue) global.parallelDeleteQueue = []
-    global.parallelDeleteQueue.push({ chat, key: m.key, conn })
-    if (!global.parallelDeleteRunning) {
-      global.parallelDeleteRunning = true
-      setImmediate(async function loop() {
-        const queue = global.parallelDeleteQueue.splice(0)
-        await Promise.all(queue.map(({ chat, key, conn }) => conn.sendMessage(chat, { delete: key }).catch(() => {})))
-        if (global.parallelDeleteQueue.length) setImmediate(loop)
-        else global.parallelDeleteRunning = false
-      }())
+    try {
+      await conn.sendMessage(m.chat, { delete: m.key })
+    } catch (e) {
+      console.error('Error eliminando mensaje:', e)
     }
-    return
   }
 }
 
