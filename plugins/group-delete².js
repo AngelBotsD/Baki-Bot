@@ -10,6 +10,7 @@ return conn.sendMessage(m.chat, { delete: m.quoted.vM.key })
 }
 }
 handler.customPrefix = /^\.?(del)$/i;
+handler.command = new RegExp()
 handler.group = true
 handler.admin = true
 
