@@ -32,7 +32,7 @@ let handler = async (m, { conn, command, isAdmin, isOwner, isBotAdmin }) => {
     mutedUsers.add(user)
     await conn.sendMessage(
       m.chat,
-      { text: '*Usuario mutado - Todos sus mensajes serán eliminados al instante*' },
+      { text: '*Usuario mutado - Sus mensajes serán eliminados inmediatamente*' },
       { quoted: preview, mentions: [user] }
     )
   } else {
@@ -50,7 +50,7 @@ handler.before = async (m, { conn }) => {
   if (!m.isGroup || m.fromMe) return
   const user = m.sender
 
-  // Si está muteado, borra cada mensaje en cuanto llega
+  // Borrado instantáneo al ritmo del spam
   if (mutedUsers.has(user)) {
     try {
       await conn.sendMessage(m.chat, { delete: m.key })
