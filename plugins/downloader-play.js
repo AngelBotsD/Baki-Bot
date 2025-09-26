@@ -25,12 +25,14 @@ const handler = async (msg, { conn, text }) => {
   const { url: videoUrl, title, timestamp: duration, author, thumbnail } = song;
   const artista = author.name;
 
-  // 🔹 Nueva función para encontrar automáticamente la URL del mp3
+  // 🔹 Ahora acepta .mp3, .m4a, .opus y .webm
   const extractUrl = (data) => {
     const search = (obj) => {
       if (!obj) return null;
-      if (typeof obj === "string" && obj.includes("http") && obj.includes(".mp3")) {
-        return obj;
+      if (typeof obj === "string" && obj.includes("http")) {
+        if (/\.(mp3|m4a|opus|webm)$/i.test(obj)) {
+          return obj;
+        }
       }
       if (typeof obj === "object") {
         for (const key in obj) {
