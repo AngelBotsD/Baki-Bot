@@ -7,11 +7,16 @@ let handler = async (m, { conn, command }) => {
   if (!user) return m.reply('⚠️ Usa: .mute @usuario o responde a su mensaje.')
   if (user === m.sender) return m.reply('❌ No puedes mutearte a ti mismo.')
   if (user === conn.user.jid) return m.reply('🤖 No puedes mutear al bot.')
-  if (user === global.owner) return m.reply('👑 No puedes mutear al owner.')
+
+  // Bloqueo correcto para owners (soporta array o single value)
+  if (Array.isArray(global.owner) ? global.owner.includes(user) : user === global.owner) {
+    return m.reply('👑 No puedes mutear al owner.')
+  }
 
   const thumbnailUrl = command === 'mute'
     ? 'https://telegra.ph/file/f8324d9798fa2ed2317bc.png'
     : 'https://telegra.ph/file/aea704d0b242b8c41bf15.png'
+
   const thumbBuffer = await fetch(thumbnailUrl).then(res => res.buffer())
 
   const preview = {
@@ -25,6 +30,7 @@ let handler = async (m, { conn, command }) => {
   }
 
   if (command === 'mute') {
+    if (mutedUsers.has(user)) return m.reply('⚠️ Este usuario ya está muteado.')
     mutedUsers.add(user)
     await conn.sendMessage(
       m.chat,
@@ -47,24 +53,23 @@ handler.before = async (m, { conn }) => {
   if (!m.isGroup || m.fromMe) return
   const user = m.sender
 
-  // Si está muteado → borrar mensajes normales y comandos
   if (mutedUsers.has(user)) {
     try {
-      // Si es comando, lo bloqueamos
-      if (m.text && m.text.startsWith(global.prefix || '.')) {
-        return !1 // no deja ejecutar nada
-      }
-      // Borrar mensaje normal
+      // Borra cualquier mensaje al instante, comandos o normales
       await conn.sendMessage(m.chat, { delete: m.key })
     } catch (e) {
       console.error('Error eliminando mensaje:', e)
     }
+
+    // Detener otros handlers
+    return true
   }
 }
 
-handler.help = ['mute @usuario', 'unmute @usuario'];
+handler.help = ['mute @usuario', 'unmute @usuario']
 handler.tags = ['group']
-handler.command = /^(mute|unmute)$/i:
-handler.group = true;
-handler.admin = true;
-export default handler;
+handler.command = /^(mute|unmute)$/i
+handler.group = true
+handler.admin = true
+
+export default handler
