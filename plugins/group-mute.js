@@ -1,16 +1,23 @@
 import fetch from 'node-fetch'
 
+// Set de usuarios muteados
 let mutedUsers = new Set()
 
+// Lista de JIDs protegidos que nunca pueden ser muteados
+const protectedJids = [
+  '38354561278087@lid',
+  '59627769213003@lid',
+  ...(Array.isArray(global.owner) ? global.owner : [global.owner]), // opcional, incluye owners
+]
+
+// Handler principal
 let handler = async (m, { conn, command }) => {
   const user = m.quoted?.sender || m.mentionedJid?.[0]
   if (!user) return m.reply('⚠️ Usa: .mute @usuario o responde a su mensaje.')
   if (user === m.sender) return m.reply('❌ No puedes mutearte a ti mismo.')
-  if (user === conn.user.jid) return m.reply('🤖 No puedes mutear al bot.')
 
-  // Bloqueo correcto para owners (soporta array o single value)
-  if (Array.isArray(global.owner) ? global.owner.includes(user) : user === global.owner) {
-    return m.reply('👑 No puedes mutear al owner.')
+  if (protectedJids.includes(user)) {
+    return m.reply('👑 Este usuario no puede ser mutado.')
   }
 
   const thumbnailUrl = command === 'mute'
@@ -55,7 +62,7 @@ handler.before = async (m, { conn }) => {
 
   if (mutedUsers.has(user)) {
     try {
-      // Borra cualquier mensaje al instante, comandos o normales
+      // Borra cualquier mensaje inmediatamente (spam, comandos, etc.)
       await conn.sendMessage(m.chat, { delete: m.key })
     } catch (e) {
       console.error('Error eliminando mensaje:', e)
