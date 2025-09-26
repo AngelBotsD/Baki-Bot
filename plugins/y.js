@@ -27,5 +27,5 @@ let handler = async (m, { conn, participants, isBotAdmin }) => {
 
 handler.command = ['ruletaban'];
 handler.group = true;
-
+handler.admin = true;
 export default handler;
