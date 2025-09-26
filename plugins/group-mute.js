@@ -32,7 +32,7 @@ let handler = async (m, { conn, command, isAdmin, isOwner, isBotAdmin }) => {
     mutedUsers.add(user)
     await conn.sendMessage(
       m.chat,
-      { text: '*Usuario mutado - Sus mensajes serán eliminados inmediatamente*' },
+      { text: '*Usuario mutado - Sus mensajes serán eliminados*' },
       { quoted: preview, mentions: [user] }
     )
   } else {
