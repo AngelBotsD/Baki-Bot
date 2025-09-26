@@ -1,30 +1,45 @@
 let handler = async (m, { conn }) => {
-  const body = m.text?.trim()
-  let user
+  if (!m.isGroup || !m.sender) return;
 
-  // Si hay alguien mencionado
-  if (m.mentionedJid && m.mentionedJid.length) {
-    user = m.mentionedJid[0]
-  } 
-  // Si es un reply
-  else if (/^\.?promote$/i.test(body) && m.quoted) {
-    user = m.quoted.sender
-  } 
-  else return conn.sendMessage(m.chat, { react: { text: '☁️', key: m.key } })
+  const body = m.text?.trim();
+  if (!body) return;
 
-  user = user.trim()
-  const metadata = await conn.groupMetadata(m.chat)
-  const admins = metadata.participants.filter(p => p.admin !== null).map(p => p.id)
+  // Detectar acción: promote o demote, con o sin punto
+  const actionMatch = body.match(/^\.?(promote|demote)/i);
+  if (!actionMatch) return;
 
-  if (admins.includes(user)) return
+  const action = actionMatch[1].toLowerCase();
+
+  // Obtener usuario: mencionado con @ o reply
+  let user = m.mentionedJid?.[0] 
+          || m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0] 
+          || m.quoted?.sender;
+
+  if (!user) return conn.sendMessage(m.chat, { react: { text: '☁️', key: m.key } });
+
+  user = user.trim();
+
+  // Obtener admins actuales
+  const metadata = await conn.groupMetadata(m.chat);
+  const admins = metadata.participants.filter(p => p.admin !== null).map(p => p.id);
+
+  // Validaciones
+  if (action === 'promote' && admins.includes(user)) return;
+  if (action === 'demote' && !admins.includes(user)) return;
 
   try {
-    await conn.groupParticipantsUpdate(m.chat, [user], 'promote')
-    await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } })
-  } catch (e) {}
-}
+    await conn.groupParticipantsUpdate(m.chat, [user], action);
+    await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
+  } catch (e) {
+    console.error(e);
+  }
+};
 
-handler.customPrefix = /^\.?(promote)$/i
-handler.command = new RegExp()
+// Regex genérico para detectar la acción
+handler.customPrefix = /^\.?(promote|demote)/i;
+handler.command = new RegExp();
+handler.group = true;
+handler.admin = true;
+handler.botAdmin = true;
 
-export default handler
+export default handler;
