@@ -12,6 +12,7 @@ const handler = async (msg, { conn, text }) => {
 
   await conn.sendMessage(msg.key.remoteJid, { react: { text: "🕒", key: msg.key } });
 
+  // Buscar video
   const res = await yts({ query: text, hl: "es", gl: "MX" });
   const song = res.videos[0];
   if (!song) {
@@ -25,6 +26,7 @@ const handler = async (msg, { conn, text }) => {
   const { url: videoUrl, title, timestamp: duration, author, thumbnail } = song;
   const artista = author.name;
 
+  // Función para intentar con varias APIs
   const tryApi = async (apiName, urlBuilder) => {
     try {
       const r = await axios.get(urlBuilder(), { timeout: 7000 });
@@ -40,30 +42,15 @@ const handler = async (msg, { conn, text }) => {
     () => tryApi("Api 1M", () => `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp3&quality=64&apikey=may-0595dca2`),
     () => tryApi("Api 2A", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}&quality=64`),
     () => tryApi("Api 3F", () => `https://api-adonix.ultraplus.click/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}&quality=64`),
-    () => tryApi("Neoxr", () => `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`),
     () => tryApi("Vreden", () => `https://api.vreden.my.id/api/ytmp3?url=${encodeURIComponent(videoUrl)}&quality=64`),
     () => tryApi("Zenkey", () => `https://api.zenkey.my.id/api/download/ytmp3?apikey=zenkey&url=${encodeURIComponent(videoUrl)}&quality=64`)
   ];
 
-  const tryDownload = async () => {
-    let lastError;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        return await Promise.any(apis.map(api => api()));
-      } catch (err) {
-        lastError = err;
-        if (attempt < 3) {
-          await conn.sendMessage(msg.key.remoteJid, { react: { text: "🔄", key: msg.key } });
-        }
-        if (attempt === 3) throw lastError;
-      }
-    }
-  };
-
   try {
-    const winner = await tryDownload();
+    const winner = await Promise.any(apis.map(api => api()));
     const audioDownloadUrl = winner.url;
 
+    // Mensaje único con info + audio + API ganadora
     await conn.sendMessage(
       msg.key.remoteJid,
       {
@@ -74,7 +61,7 @@ const handler = async (msg, { conn, text }) => {
 ⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
 ⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
-⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${winner.api === "Neoxr" ? "128kbps" : "64kbps"}
+⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* 64kbps
 ⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝚙𝚒:* ${winner.api}
 
 *» 𝘌𝘕𝘝𝘐𝘈𝘕𝘋𝘖 𝘈𝘜𝘋𝘐𝘖  🎧*
@@ -88,6 +75,7 @@ const handler = async (msg, { conn, text }) => {
       { quoted: msg }
     );
 
+    // Enviar audio
     await conn.sendMessage(
       msg.key.remoteJid,
       {
