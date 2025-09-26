@@ -25,10 +25,28 @@ const handler = async (msg, { conn, text }) => {
   const { url: videoUrl, title, timestamp: duration, author, thumbnail } = song;
   const artista = author.name;
 
+  // 🔹 Nueva función para encontrar automáticamente la URL del mp3
+  const extractUrl = (data) => {
+    const search = (obj) => {
+      if (!obj) return null;
+      if (typeof obj === "string" && obj.includes("http") && obj.includes(".mp3")) {
+        return obj;
+      }
+      if (typeof obj === "object") {
+        for (const key in obj) {
+          const found = search(obj[key]);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    return search(data);
+  };
+
   const tryApi = async (apiName, urlBuilder) => {
     try {
       const r = await axios.get(urlBuilder(), { timeout: 7000 });
-      const audioUrl = r.data?.result?.url || r.data?.data?.url;
+      const audioUrl = extractUrl(r.data);
       if (audioUrl) return { url: audioUrl, api: apiName };
       throw new Error(`${apiName}: No entregó URL válido`);
     } catch (err) {
