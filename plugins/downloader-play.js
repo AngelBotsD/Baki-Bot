@@ -25,32 +25,32 @@ const handler = async (msg, { conn, text }) => {
   // Lista de APIs (todas en carrera)
   const apis = [
     async () => {
-      const r = await axios.get(`https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp3&apikey=may-0595dca2`, { timeout: 7000 })
+      const r = await axios.get(`https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp3&apikey=may-0595dca2`, { timeout: 9000 })
       if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) return { url: r.data.result?.url || r.data.data?.url, api: "MayAPI" }
       throw new Error("MayAPI: URL inválido")
     },
     async () => {
-      const r = await axios.get(`https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}`, { timeout: 7000 })
+      const r = await axios.get(`https://api-adonix.ultraplus.click/download/ytmp3?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}`, { timeout: 9000 })
       if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) return { url: r.data.result?.url || r.data.data?.url, api: "Adonix1" }
       throw new Error("Adonix1: URL inválido")
     },
     async () => {
-      const r = await axios.get(`https://api-adonix.ultraplus.click/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}`, { timeout: 7000 })
+      const r = await axios.get(`https://api-adonix.ultraplus.click/download/ytmp3?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}`, { timeout: 9000 })
       if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) return { url: r.data.result?.url || r.data.data?.url, api: "Adonix2" }
       throw new Error("Adonix2: URL inválido")
     },
     async () => {
-      const r = await axios.get(`https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`, { timeout: 7000 })
+      const r = await axios.get(`https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`, { timeout: 9000 })
       if (r.data?.status && r.data?.result?.url) return { url: r.data.result.url, api: "Neoxr" }
       throw new Error("Neoxr: URL inválido")
     },
     async () => {
-      const r = await axios.get(`https://api.vreden.my.id/api/ytmp3?url=${encodeURIComponent(videoUrl)}&quality=64`, { timeout: 7000 })
+      const r = await axios.get(`https://api.vreden.my.id/api/ytmp3?url=${encodeURIComponent(videoUrl)}&quality=64`, { timeout: 9000 })
       if (r.data?.result?.download?.url) return { url: r.data.result.download.url, api: "Vreden" }
       throw new Error("Vreden: URL inválido")
     },
     async () => {
-      const r = await axios.get(`https://api.zenkey.my.id/api/download/ytmp3?apikey=zenkey&url=${encodeURIComponent(videoUrl)}&quality=64`, { timeout: 7000 })
+      const r = await axios.get(`https://api.zenkey.my.id/api/download/ytmp3?apikey=zenkey&url=${encodeURIComponent(videoUrl)}&quality=64`, { timeout: 9000 })
       if (r.data?.result?.download?.url) return { url: r.data.result.download.url, api: "ZenKey" }
       throw new Error("ZenKey: URL inválido")
     }
