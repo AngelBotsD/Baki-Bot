@@ -31,7 +31,7 @@ const handler = async (msg, { conn, text }) => {
       let errors = [];
 
       apis.forEach(p => {
-        p.then(result => {
+        p().then(result => {
           if (!settled) {
             settled = true;
             resolve(result);
