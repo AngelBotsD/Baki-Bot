@@ -1,26 +1,18 @@
-const handler = async (m, { conn }) => {
-  const body = m.text?.trim()
-  if (!body) return
-
-  if (!/^brat|.brat\s+/i.test(body)) return
-
-  const text = body.replace(/^(brat|.brat)\s+/i, "").trim()
+const handler = async (m, { conn, text }) => {
   if (!text) {
-    return m.reply(`☁️ 𝘼𝙂𝙍𝙀𝙂𝘼 𝙏𝙀𝙓𝙏𝙊 𝙋𝘼𝙍𝘼 𝙂𝙀𝙉𝙀𝙍𝘼𝙍 𝙀𝙇 𝙎𝙏𝙄𝘾𝙆𝙀𝙍\n\nEjemplo: brat angelito`)
+    return m.reply(`☁️ 𝘼𝙂𝙍𝙀𝙂𝘼 𝙏𝙀𝙓𝙏𝙊 𝙋𝘼𝙍𝘼 𝙂𝙀𝙉𝙀𝙍𝘼𝙍 𝙀𝙇 𝙎𝙏𝙄𝘾𝙆𝙀𝙍`)
   }
 
   try {
-    // reacción ⌛
-    await conn.sendMessage(m.chat, { react: { text: "⌛", key: m.key } })
+    await conn.sendMessage(m.chat, { react: { text: "🕒", key: m.key } })
 
     const url = `https://api.siputzx.my.id/api/m/brat?text=${encodeURIComponent(text)}`
     await conn.sendMessage(m.chat, {
       sticker: { url },
-      packname: "AngelBot",
-      author: "AngelBot",
+      packname: "",
+      author: "",
     }, { quoted: m })
 
-    // reacción ✅
     await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } })
   } catch (e) {
     console.error(e)
@@ -29,9 +21,7 @@ const handler = async (m, { conn }) => {
   }
 }
 
-// igual que play: brat <texto> o .brat <texto>
-handler.customPrefix = /^(brat|.brat)\s+/i
-handler.command = new RegExp
+handler.command = /^brat$/i
 handler.help = ["brat <texto>"]
 handler.tags = ["sticker"]
 
